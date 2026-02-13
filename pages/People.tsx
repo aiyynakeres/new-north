@@ -12,7 +12,7 @@ const People: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="font-serif text-3xl font-bold text-north-900 mb-8">Community</h1>
+      <h1 className="font-serif text-3xl font-bold text-north-900 mb-8">Участники клуба</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {users.map((user) => (
           <Link

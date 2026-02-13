@@ -18,7 +18,7 @@ const Feed: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="font-serif text-3xl font-bold text-north-900 mb-8">Fresh Perspectives</h1>
+      <h1 className="font-serif text-3xl font-bold text-north-900 mb-8">Что нового</h1>
       <div className="space-y-8">
         {articles.map((article) => {
           const author = getAuthor(article.authorId);
