@@ -17,7 +17,7 @@ const Header: React.FC<Props> = ({ user, onLogout }) => {
           <div className="w-8 h-8 bg-north-800 rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg group-hover:rotate-3 transition-transform">
             N
           </div>
-          <span className="font-serif font-bold text-xl text-north-800 tracking-tight">New-North</span>
+          <span className="font-serif font-bold text-xl text-north-800 tracking-tight">N-N</span>
         </Link>
 
         <nav className="flex items-center gap-4">
@@ -25,7 +25,7 @@ const Header: React.FC<Props> = ({ user, onLogout }) => {
             <>
               <Link to="/write">
                 <Button variant="secondary" className="hidden sm:flex text-sm">
-                  <PenTool size={16} /> Write
+                  <PenTool size={16} /> Написать
                 </Button>
               </Link>
               <Link to="/people" className="text-north-500 hover:text-north-900 transition-colors">
@@ -47,10 +47,10 @@ const Header: React.FC<Props> = ({ user, onLogout }) => {
           ) : (
             <div className="flex gap-2">
               <Link to="/login">
-                <Button variant="ghost">Log In</Button>
+                <Button variant="ghost">Вход</Button>
               </Link>
               <Link to="/register">
-                <Button variant="primary">Join Club</Button>
+                <Button variant="primary">Регистрация</Button>
               </Link>
             </div>
           )}

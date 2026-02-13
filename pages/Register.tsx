@@ -30,7 +30,7 @@ const Register: React.FC<Props> = ({ onLogin }) => {
 
   const handleRegister = async () => {
     if (formData.bio.length < 100) {
-      alert('Please write at least 100 characters about yourself.');
+      alert('Расскажи о себе минимум 100 символов');
       return;
     }
 
@@ -89,35 +89,35 @@ const Register: React.FC<Props> = ({ onLogin }) => {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-north-100 p-8">
         <div className="mb-8 text-center">
           <h2 className="font-serif text-3xl font-bold text-north-900 mb-2">
-            {step === 1 ? 'Join the Club' : 'Complete Profile'}
+            {step === 1 ? 'Вступить в клуб' : 'Завершить профиль'}
           </h2>
-          <p className="text-north-500">Step {step} of 2</p>
+          <p className="text-north-500">Шаг {step} из 2</p>
         </div>
 
         {step === 1 ? (
           <div className="space-y-4">
             <Input
-              label="Telegram Handle"
-              placeholder="@username"
+              label="Telegram"
+              placeholder="username"
               value={formData.telegramHandle}
               onChange={(e: any) => setFormData({ ...formData, telegramHandle: e.target.value })}
             />
             <Input
-              label="Email"
+              label="Почта"
               type="email"
               placeholder="you@example.com"
               value={formData.email}
               onChange={(e: any) => setFormData({ ...formData, email: e.target.value })}
             />
             <Input
-              label="Password"
+              label="Пароль"
               type="password"
               placeholder="••••••••"
               value={formData.password}
               onChange={(e: any) => setFormData({ ...formData, password: e.target.value })}
             />
             <Button className="w-full mt-6" onClick={handleNext}>
-              Next Step
+              Далее
             </Button>
           </div>
         ) : (
@@ -140,7 +140,7 @@ const Register: React.FC<Props> = ({ onLogin }) => {
                 ) : (
                   <div className="text-center p-2">
                     <Upload className="w-8 h-8 text-north-400 mx-auto mb-1 group-hover:text-north-600" />
-                    <span className="text-[10px] text-north-400 font-medium">Drop photo</span>
+                    <span className="text-[10px] text-north-400 font-medium">Добавить фото</span>
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -151,14 +151,14 @@ const Register: React.FC<Props> = ({ onLogin }) => {
             </div>
 
             <Input
-              label="Full Name"
-              placeholder="Ivan Ivanov"
+              label="Имя и фамилия"
+              placeholder="Петр Петров"
               value={formData.fullName}
               onChange={(e: any) => setFormData({ ...formData, fullName: e.target.value })}
             />
 
             <div className="w-full">
-              <label className="block text-sm font-medium text-north-600 mb-1">About Me</label>
+              <label className="block text-sm font-medium text-north-600 mb-1">Обо мне</label>
               <textarea
                 className={`w-full px-4 py-3 rounded-lg border ${
                   formData.bio.length > 0 && formData.bio.length < 100
@@ -172,35 +172,35 @@ const Register: React.FC<Props> = ({ onLogin }) => {
               <div
                 className={`text-xs text-right mt-1 ${formData.bio.length < 100 ? 'text-red-500' : 'text-north-400'}`}
               >
-                {formData.bio.length} / 100 characters minimum
+                {formData.bio.length} / 100 символов минимум
               </div>
             </div>
 
             <div className="w-full">
-              <label className="block text-sm font-medium text-north-600 mb-1">Interests</label>
+              <label className="block text-sm font-medium text-north-600 mb-1">Интересы</label>
               <div className="flex flex-wrap gap-2 mb-2 min-h-[30px]">
                 {formData.tags.map((tag) => (
                   <Tag key={tag} onRemove={() => removeTag(tag)}>
                     {tag}
                   </Tag>
                 ))}
-                {formData.tags.length === 0 && <span className="text-sm text-north-400 italic">No tags added yet</span>}
+                {formData.tags.length === 0 && <span className="text-sm text-north-400 italic">Еще не добавлен ни один тэг</span>}
               </div>
               <input
                 className="w-full px-4 py-2 rounded-lg border border-north-200 focus:outline-none focus:ring-2 focus:ring-north-400 focus:border-transparent bg-white transition-all text-north-800 placeholder-north-300"
-                placeholder="Type interest and press Enter"
+                placeholder="Напиши интереc"
                 value={tagInput}
                 onKeyDown={addTag}
                 onChange={(e) => setTagInput(e.target.value)}
               />
-              <p className="text-xs text-north-400 mt-1">Press Enter to add a tag</p>
+              <p className="text-xs text-north-400 mt-1">Нажми на Enter для добавления тэга</p>
             </div>
 
             <Button className="w-full mt-8" onClick={handleRegister}>
-              Finish Profile
+              Регистрация
             </Button>
             <button onClick={() => setStep(1)} className="w-full text-center text-sm text-north-500 mt-2 hover:underline">
-              Back
+              Назад
             </button>
           </div>
         )}
