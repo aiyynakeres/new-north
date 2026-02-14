@@ -9,49 +9,54 @@ type Props = {
   onLogin: (u: UserType) => void;
 };
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 const Login: React.FC<Props> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [touched, setTouched] = useState({ email: false, password: false });
+  const [step, setStep] = useState<1 | 2>(1);
+  const [telegramHandle, setTelegramHandle] = useState('');
+  const [authCode, setAuthCode] = useState('');
+  const [touched, setTouched] = useState({ telegramHandle: false, authCode: false });
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const fieldErrors = useMemo(() => {
-    const errors: { email?: string; password?: string } = {};
-    const normalizedEmail = email.trim();
-    const passwordLength = password.trim().length;
+    const errors: { telegramHandle?: string; authCode?: string } = {};
+    const normalizedTelegramHandle = telegramHandle.trim();
+    const normalizedAuthCode = authCode.trim();
 
-    if (!normalizedEmail) {
-      errors.email = 'Почта обязательна';
-    } else if (!EMAIL_REGEX.test(normalizedEmail)) {
-      errors.email = 'Неверный формат почты';
+    if (!normalizedTelegramHandle) {
+      errors.telegramHandle = 'Telegram обязателен';
     }
 
-    if (passwordLength === 0) {
-      errors.password = 'Пароль обязателен';
-    } else if (passwordLength < 8 || passwordLength > 64) {
-      errors.password = 'Пароль должен быть от 8 до 64 символов';
+    if (!normalizedAuthCode) {
+      errors.authCode = 'Код обязателен';
+    } else if (!/^\d{6}$/.test(normalizedAuthCode)) {
+      errors.authCode = 'Код должен состоять из 6 цифр';
     }
 
     return errors;
-  }, [email, password]);
+  }, [telegramHandle, authCode]);
 
-  const isValid = useMemo(
-    () => !fieldErrors.email && !fieldErrors.password,
-    [fieldErrors]
-  );
+  const isStepOneValid = useMemo(() => !fieldErrors.telegramHandle, [fieldErrors.telegramHandle]);
+  const isStepTwoValid = useMemo(() => !fieldErrors.authCode, [fieldErrors.authCode]);
 
-  const handleLogin = () => {
-    if (!isValid) {
-      setTouched({ email: true, password: true });
+  const handleRequestCode = () => {
+    if (!isStepOneValid) {
+      setTouched((prev) => ({ ...prev, telegramHandle: true }));
       return;
     }
 
     setError('');
-    const user = db.getUserByEmail(email);
-    if (user && user.password === password) {
+    setStep(2);
+  };
+
+  const handleLogin = () => {
+    if (!isStepTwoValid) {
+      setTouched((prev) => ({ ...prev, authCode: true }));
+      return;
+    }
+
+    setError('');
+    const user = db.verifyAuthCode(telegramHandle.trim(), authCode.trim());
+    if (user) {
       db.setSession(user);
       onLogin(user);
       navigate('/');
@@ -66,29 +71,50 @@ const Login: React.FC<Props> = ({ onLogin }) => {
         <h2 className="font-serif text-3xl font-bold text-north-900 mb-6 text-center">Добро пожаловать</h2>
         {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>}
         <div className="space-y-4">
-          <Input
-            label="Email"
-            type="email"
-            required
-            error={touched.email ? fieldErrors.email : undefined}
-            onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
-            value={email}
-            onChange={(e: any) => setEmail(e.target.value)}
-          />
-          <Input
-            label="Password"
-            type="password"
-            required
-            minLength={8}
-            maxLength={64}
-            error={touched.password ? fieldErrors.password : undefined}
-            onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
-            value={password}
-            onChange={(e: any) => setPassword(e.target.value)}
-          />
-          <Button className="w-full mt-4" onClick={handleLogin} disabled={!isValid}>
-            Войти
-          </Button>
+          {step === 1 ? (
+            <>
+              <Input
+                label="Telegram"
+                required
+                error={touched.telegramHandle ? fieldErrors.telegramHandle : undefined}
+                onBlur={() => setTouched((prev) => ({ ...prev, telegramHandle: true }))}
+                value={telegramHandle}
+                onChange={(e: any) => setTelegramHandle(e.target.value)}
+              />
+              <Button className="w-full mt-4" onClick={handleRequestCode} disabled={!isStepOneValid}>
+                Получить код
+              </Button>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Код авторизации"
+                required
+                placeholder="123456"
+                inputMode="numeric"
+                maxLength={6}
+                error={touched.authCode ? fieldErrors.authCode : undefined}
+                onBlur={() => setTouched((prev) => ({ ...prev, authCode: true }))}
+                value={authCode}
+                onChange={(e: any) => setAuthCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              />
+              <p className="text-xs text-north-500 -mt-2">Тестовый код: 123456</p>
+              <Button className="w-full mt-4" onClick={handleLogin} disabled={!isStepTwoValid}>
+                Войти
+              </Button>
+              <button
+                className="w-full text-center text-sm text-north-500 hover:underline"
+                onClick={() => {
+                  setStep(1);
+                  setAuthCode('');
+                  setTouched((prev) => ({ ...prev, authCode: false }));
+                  setError('');
+                }}
+              >
+                Изменить Telegram
+              </button>
+            </>
+          )}
           <div className="text-center mt-4">
             <Link to="/register" className="text-north-600 text-sm hover:text-north-900">
               Зарегаться можно тут
