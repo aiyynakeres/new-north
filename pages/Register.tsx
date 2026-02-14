@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Upload } from 'lucide-react';
 import Input from '../components/ui/Input';
@@ -10,6 +10,10 @@ import { db } from '../services/mockDb';
 type Props = {
   onLogin: (u: UserType) => void;
 };
+
+type FormField = 'telegramHandle' | 'email' | 'password' | 'fullName' | 'bio';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const Register: React.FC<Props> = ({ onLogin }) => {
   const [step, setStep] = useState(1);
@@ -24,13 +28,83 @@ const Register: React.FC<Props> = ({ onLogin }) => {
   });
   const [tagInput, setTagInput] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [touched, setTouched] = useState<Record<FormField, boolean>>({
+    telegramHandle: false,
+    email: false,
+    password: false,
+    fullName: false,
+    bio: false,
+  });
   const navigate = useNavigate();
 
-  const handleNext = () => setStep(2);
+  const fieldErrors = useMemo(() => {
+    const errors: Partial<Record<FormField, string>> = {};
+    const telegram = formData.telegramHandle.trim();
+    const email = formData.email.trim();
+    const passwordLength = formData.password.trim().length;
+    const fullName = formData.fullName.trim();
+    const bioLength = formData.bio.trim().length;
+
+    if (!telegram) {
+      errors.telegramHandle = 'Telegram обязателен';
+    }
+    if (!email) {
+      errors.email = 'Почта обязательна';
+    } else if (!EMAIL_REGEX.test(email)) {
+      errors.email = 'Неверный формат почты';
+    }
+    if (passwordLength === 0) {
+      errors.password = 'Пароль обязателен';
+    } else if (passwordLength < 8 || passwordLength > 64) {
+      errors.password = 'Пароль должен быть от 8 до 64 символов';
+    }
+    if (!fullName) {
+      errors.fullName = 'Имя и фамилия обязательны';
+    }
+    if (bioLength === 0) {
+      errors.bio = 'Расскажи о себе';
+    } else if (bioLength < 100) {
+      errors.bio = 'Минимум 100 символов';
+    }
+
+    return errors;
+  }, [formData]);
+
+  const isValid = useMemo(() => {
+    if (step === 1) {
+      return (
+        !fieldErrors.telegramHandle &&
+        !fieldErrors.email &&
+        !fieldErrors.password
+      );
+    }
+
+    return !fieldErrors.fullName && !fieldErrors.bio;
+  }, [fieldErrors, step]);
+
+  const touchField = (field: FormField) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const touchFieldsForStep = (currentStep: number) => {
+    if (currentStep === 1) {
+      setTouched((prev) => ({ ...prev, telegramHandle: true, email: true, password: true }));
+      return;
+    }
+    setTouched((prev) => ({ ...prev, fullName: true, bio: true }));
+  };
+
+  const handleNext = () => {
+    if (!isValid) {
+      touchFieldsForStep(1);
+      return;
+    }
+    setStep(2);
+  };
 
   const handleRegister = async () => {
-    if (formData.bio.length < 100) {
-      alert('Расскажи о себе минимум 100 символов');
+    if (!isValid) {
+      touchFieldsForStep(2);
       return;
     }
 
@@ -99,6 +173,9 @@ const Register: React.FC<Props> = ({ onLogin }) => {
             <Input
               label="Telegram"
               placeholder="username"
+              required
+              error={touched.telegramHandle ? fieldErrors.telegramHandle : undefined}
+              onBlur={() => touchField('telegramHandle')}
               value={formData.telegramHandle}
               onChange={(e: any) => setFormData({ ...formData, telegramHandle: e.target.value })}
             />
@@ -106,6 +183,9 @@ const Register: React.FC<Props> = ({ onLogin }) => {
               label="Почта"
               type="email"
               placeholder="you@example.com"
+              required
+              error={touched.email ? fieldErrors.email : undefined}
+              onBlur={() => touchField('email')}
               value={formData.email}
               onChange={(e: any) => setFormData({ ...formData, email: e.target.value })}
             />
@@ -113,10 +193,15 @@ const Register: React.FC<Props> = ({ onLogin }) => {
               label="Пароль"
               type="password"
               placeholder="••••••••"
+              required
+              minLength={8}
+              maxLength={64}
+              error={touched.password ? fieldErrors.password : undefined}
+              onBlur={() => touchField('password')}
               value={formData.password}
               onChange={(e: any) => setFormData({ ...formData, password: e.target.value })}
             />
-            <Button className="w-full mt-6" onClick={handleNext}>
+            <Button className="w-full mt-6" onClick={handleNext} disabled={!isValid}>
               Далее
             </Button>
           </div>
@@ -153,6 +238,8 @@ const Register: React.FC<Props> = ({ onLogin }) => {
             <Input
               label="Имя и фамилия"
               placeholder="Петр Петров"
+              error={touched.fullName ? fieldErrors.fullName : undefined}
+              onBlur={() => touchField('fullName')}
               value={formData.fullName}
               onChange={(e: any) => setFormData({ ...formData, fullName: e.target.value })}
             />
@@ -161,19 +248,21 @@ const Register: React.FC<Props> = ({ onLogin }) => {
               <label className="block text-sm font-medium text-north-600 mb-1">Обо мне</label>
               <textarea
                 className={`w-full px-4 py-3 rounded-lg border ${
-                  formData.bio.length > 0 && formData.bio.length < 100
+                  touched.bio && fieldErrors.bio
                     ? 'border-red-300 focus:ring-red-200'
                     : 'border-north-200 focus:ring-north-400'
                 } focus:outline-none focus:ring-2 bg-white transition-all text-north-800 placeholder-north-300 min-h-[120px]`}
                 placeholder="Tell us about your experience, interests, and what drives you..."
                 value={formData.bio}
+                onBlur={() => touchField('bio')}
                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
               />
               <div
-                className={`text-xs text-right mt-1 ${formData.bio.length < 100 ? 'text-red-500' : 'text-north-400'}`}
+                className={`text-xs text-right mt-1 ${touched.bio && fieldErrors.bio ? 'text-red-500' : 'text-north-400'}`}
               >
                 {formData.bio.length} / 100 символов минимум
               </div>
+              {touched.bio && fieldErrors.bio && <p className="text-red-500 text-xs mt-1">{fieldErrors.bio}</p>}
             </div>
 
             <div className="w-full">
@@ -196,7 +285,7 @@ const Register: React.FC<Props> = ({ onLogin }) => {
               <p className="text-xs text-north-400 mt-1">Нажми на Enter для добавления тэга</p>
             </div>
 
-            <Button className="w-full mt-8" onClick={handleRegister}>
+            <Button className="w-full mt-8" onClick={handleRegister} disabled={!isValid}>
               Регистрация
             </Button>
             <button onClick={() => setStep(1)} className="w-full text-center text-sm text-north-500 mt-2 hover:underline">
@@ -210,4 +299,3 @@ const Register: React.FC<Props> = ({ onLogin }) => {
 };
 
 export default Register;
-
