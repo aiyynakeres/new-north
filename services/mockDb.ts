@@ -3,14 +3,13 @@ import { User, Article, Comment } from '../types';
 const USERS_KEY = 'new_north_users';
 const ARTICLES_KEY = 'new_north_articles';
 const SESSION_KEY = 'new_north_session';
+const AUTH_CODE = '123456';
 
 // Initial Mock Data
 const INITIAL_USERS: User[] = [
   {
     id: 'u1',
-    email: 'admin@newnorth.yakutia',
     telegramHandle: 'admin_north',
-    password: 'password',
     fullName: 'Ayaan North',
     avatarUrl: 'https://picsum.photos/200/200?random=1',
     bannerUrl: 'https://picsum.photos/1200/400?random=1',
@@ -78,8 +77,19 @@ export const db = {
     return db.getUsers().find(u => u.id === id);
   },
 
-  getUserByEmail: (email: string): User | undefined => {
-    return db.getUsers().find(u => u.email === email);
+  getUserByTelegramHandle: (telegramHandle: string): User | undefined => {
+    return db.getUsers().find(u => u.telegramHandle === telegramHandle);
+  },
+
+  isAuthCodeValid: (code: string): boolean => {
+    return code === AUTH_CODE;
+  },
+
+  verifyAuthCode: (telegramHandle: string, code: string): User | undefined => {
+    if (code !== AUTH_CODE) {
+      return undefined;
+    }
+    return db.getUserByTelegramHandle(telegramHandle);
   },
 
   getArticles: (): Article[] => {

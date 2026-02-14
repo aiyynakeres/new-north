@@ -1,8 +1,6 @@
 export interface User {
   id: string;
-  email: string;
   telegramHandle: string;
-  password?: string; // In a real app, never store plain text. Used here for mock auth.
   fullName: string;
   avatarUrl: string;
   bannerUrl: string;

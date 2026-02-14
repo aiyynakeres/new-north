@@ -11,52 +11,43 @@ type Props = {
   onLogin: (u: UserType) => void;
 };
 
-type FormField = 'telegramHandle' | 'email' | 'password' | 'fullName' | 'bio';
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+type FormField = 'telegramHandle' | 'authCode' | 'fullName' | 'bio';
 
 const Register: React.FC<Props> = ({ onLogin }) => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [formData, setFormData] = useState({
-    email: '',
     telegramHandle: '',
-    password: '',
     fullName: '',
     avatarUrl: '',
     bio: '',
     tags: [] as string[],
   });
+  const [authCode, setAuthCode] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [touched, setTouched] = useState<Record<FormField, boolean>>({
     telegramHandle: false,
-    email: false,
-    password: false,
+    authCode: false,
     fullName: false,
     bio: false,
   });
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const fieldErrors = useMemo(() => {
     const errors: Partial<Record<FormField, string>> = {};
     const telegram = formData.telegramHandle.trim();
-    const email = formData.email.trim();
-    const passwordLength = formData.password.trim().length;
+    const normalizedAuthCode = authCode.trim();
     const fullName = formData.fullName.trim();
     const bioLength = formData.bio.trim().length;
 
     if (!telegram) {
       errors.telegramHandle = 'Telegram обязателен';
     }
-    if (!email) {
-      errors.email = 'Почта обязательна';
-    } else if (!EMAIL_REGEX.test(email)) {
-      errors.email = 'Неверный формат почты';
-    }
-    if (passwordLength === 0) {
-      errors.password = 'Пароль обязателен';
-    } else if (passwordLength < 8 || passwordLength > 64) {
-      errors.password = 'Пароль должен быть от 8 до 64 символов';
+    if (!normalizedAuthCode) {
+      errors.authCode = 'Код обязателен';
+    } else if (!/^\d{6}$/.test(normalizedAuthCode)) {
+      errors.authCode = 'Код должен состоять из 6 цифр';
     }
     if (!fullName) {
       errors.fullName = 'Имя и фамилия обязательны';
@@ -68,15 +59,14 @@ const Register: React.FC<Props> = ({ onLogin }) => {
     }
 
     return errors;
-  }, [formData]);
+  }, [authCode, formData]);
 
   const isValid = useMemo(() => {
     if (step === 1) {
-      return (
-        !fieldErrors.telegramHandle &&
-        !fieldErrors.email &&
-        !fieldErrors.password
-      );
+      return !fieldErrors.telegramHandle;
+    }
+    if (step === 2) {
+      return !fieldErrors.authCode;
     }
 
     return !fieldErrors.fullName && !fieldErrors.bio;
@@ -86,25 +76,52 @@ const Register: React.FC<Props> = ({ onLogin }) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
 
-  const touchFieldsForStep = (currentStep: number) => {
+  const touchFieldsForStep = (currentStep: 1 | 2 | 3) => {
     if (currentStep === 1) {
-      setTouched((prev) => ({ ...prev, telegramHandle: true, email: true, password: true }));
+      setTouched((prev) => ({ ...prev, telegramHandle: true }));
+      return;
+    }
+    if (currentStep === 2) {
+      setTouched((prev) => ({ ...prev, authCode: true }));
       return;
     }
     setTouched((prev) => ({ ...prev, fullName: true, bio: true }));
   };
 
-  const handleNext = () => {
+  const handleRequestCode = () => {
     if (!isValid) {
       touchFieldsForStep(1);
       return;
     }
+
+    setError('');
     setStep(2);
+  };
+
+  const handleVerifyCode = () => {
+    if (!isValid) {
+      touchFieldsForStep(2);
+      return;
+    }
+
+    setError('');
+    if (!db.isAuthCodeValid(authCode.trim())) {
+      setError('Неверный код авторизации');
+      return;
+    }
+
+    setStep(3);
   };
 
   const handleRegister = async () => {
     if (!isValid) {
-      touchFieldsForStep(2);
+      touchFieldsForStep(3);
+      return;
+    }
+
+    setError('');
+    if (db.getUserByTelegramHandle(formData.telegramHandle.trim())) {
+      setError('Пользователь с таким Telegram уже существует');
       return;
     }
 
@@ -163,10 +180,11 @@ const Register: React.FC<Props> = ({ onLogin }) => {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-north-100 p-8">
         <div className="mb-8 text-center">
           <h2 className="font-serif text-3xl font-bold text-north-900 mb-2">
-            {step === 1 ? 'Вступить в клуб' : 'Завершить профиль'}
+            {step === 1 ? 'Вступить в клуб' : step === 2 ? 'Подтвердить Telegram' : 'Завершить профиль'}
           </h2>
-          <p className="text-north-500">Шаг {step} из 2</p>
+          <p className="text-north-500">Шаг {step} из 3</p>
         </div>
+        {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>}
 
         {step === 1 ? (
           <div className="space-y-4">
@@ -179,31 +197,38 @@ const Register: React.FC<Props> = ({ onLogin }) => {
               value={formData.telegramHandle}
               onChange={(e: any) => setFormData({ ...formData, telegramHandle: e.target.value })}
             />
-            <Input
-              label="Почта"
-              type="email"
-              placeholder="you@example.com"
-              required
-              error={touched.email ? fieldErrors.email : undefined}
-              onBlur={() => touchField('email')}
-              value={formData.email}
-              onChange={(e: any) => setFormData({ ...formData, email: e.target.value })}
-            />
-            <Input
-              label="Пароль"
-              type="password"
-              placeholder="••••••••"
-              required
-              minLength={8}
-              maxLength={64}
-              error={touched.password ? fieldErrors.password : undefined}
-              onBlur={() => touchField('password')}
-              value={formData.password}
-              onChange={(e: any) => setFormData({ ...formData, password: e.target.value })}
-            />
-            <Button className="w-full mt-6" onClick={handleNext} disabled={!isValid}>
-              Далее
+            <Button className="w-full mt-6" onClick={handleRequestCode} disabled={!isValid}>
+              Получить код
             </Button>
+          </div>
+        ) : step === 2 ? (
+          <div className="space-y-4">
+            <Input
+              label="Код авторизации"
+              required
+              placeholder="123456"
+              inputMode="numeric"
+              maxLength={6}
+              error={touched.authCode ? fieldErrors.authCode : undefined}
+              onBlur={() => touchField('authCode')}
+              value={authCode}
+              onChange={(e: any) => setAuthCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            />
+            <p className="text-xs text-north-500 -mt-2">Тестовый код: 123456</p>
+            <Button className="w-full mt-6" onClick={handleVerifyCode} disabled={!isValid}>
+              Подтвердить код
+            </Button>
+            <button
+              onClick={() => {
+                setStep(1);
+                setAuthCode('');
+                setTouched((prev) => ({ ...prev, authCode: false }));
+                setError('');
+              }}
+              className="w-full text-center text-sm text-north-500 mt-2 hover:underline"
+            >
+              Назад
+            </button>
           </div>
         ) : (
           <div className="space-y-6">
@@ -288,7 +313,7 @@ const Register: React.FC<Props> = ({ onLogin }) => {
             <Button className="w-full mt-8" onClick={handleRegister} disabled={!isValid}>
               Регистрация
             </Button>
-            <button onClick={() => setStep(1)} className="w-full text-center text-sm text-north-500 mt-2 hover:underline">
+            <button onClick={() => setStep(2)} className="w-full text-center text-sm text-north-500 mt-2 hover:underline">
               Назад
             </button>
           </div>
