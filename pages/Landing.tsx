@@ -9,19 +9,22 @@ const Landing: React.FC = () => (
     <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-100/30 rounded-full blur-3xl -z-10"></div>
     <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-slate-200/30 rounded-full blur-3xl -z-10"></div>
 
-    <h1 className="font-serif text-5xl md:text-7xl font-bold text-north-900 mb-6 tracking-tight">
-      New-North
+    <h1 className="font-serif text-6xl md:text-8xl font-bold text-north-900 mb-8 tracking-tight">
+      Новый Север
     </h1>
     {/* <p className="text-xl md:text-2xl text-north-600 max-w-2xl mb-2 font-light">
       Делиться и вдохновлять 
     </p> */}
-    <p className="text-base text-north-500 max-w-lg mb-10 leading-relaxed">
+    <p className="text-lg md:text-2xl text-north-600 max-w-lg mb-6 leading-relaxed font-light">
       Делиться и вдохновлять
+    </p>
+    <p className="text-base md:text-lg text-north-600 max-w-3xl mb-12 leading-relaxed">
+      Ламповое сообщество неравнодушных жителей Якутии. Где можно находить единомышленников, делиться своим опытом, изучать полезный контент. Чтобы было комфортно мы указываем актуальную информацию кто кем является и каждый заполняет информацию о себе.
     </p>
 
     <Link to="/register">
       <Button className="px-8 py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
-        Стать участником
+        Войти
       </Button>
     </Link>
 
@@ -52,4 +55,3 @@ const Landing: React.FC = () => (
 );
 
 export default Landing;
-

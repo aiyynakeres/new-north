@@ -11,13 +11,16 @@ type Props = {
 
 const Header: React.FC<Props> = ({ user, onLogout }) => {
   return (
-    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-north-200">
+    <header className="sticky top-0 z-50 bg-white border-b border-north-200">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 bg-north-800 rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg group-hover:rotate-3 transition-transform">
-            N
-          </div>
-          <span className="font-serif font-bold text-xl text-north-800 tracking-tight">N-N</span>
+          {/* logo icon next to name */}
+          <img
+            src="/logo.png"
+            alt="New-North logo"
+            className="w-8 h-8"
+          />
+          <span className="font-serif font-bold text-xl text-north-800 tracking-tight">New-North</span>
         </Link>
 
         <nav className="flex items-center gap-4">
