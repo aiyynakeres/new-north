@@ -3,7 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Edit2, Loader2, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Tag from '../components/ui/Tag';
-import { Article as ArticleType, Comment, User as UserType } from '../types';
+import CommunityPostBadge from '../components/ui/CommunityPostBadge';
+import ArticleReactionsControl from '../components/articles/ArticleReactionsControl';
+import { Article as ArticleType, Comment, Community, User as UserType } from '../types';
 import { db } from '../services/mockDb';
 
 type Props = {
@@ -17,6 +19,7 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
   const [author, setAuthor] = useState<UserType | null>(null);
   const [commentText, setCommentText] = useState('');
   const [users, setUsers] = useState<UserType[]>([]);
+  const [community, setCommunity] = useState<Community | null>(null);
 
   useEffect(() => {
     setUsers(db.getUsers());
@@ -26,9 +29,14 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
         setArticle(a);
         const u = db.getUserById(a.authorId);
         if (u) setAuthor(u);
+        setCommunity(a.communityId ? db.getCommunityById(a.communityId) ?? null : null);
+      } else {
+        setArticle(null);
+        setAuthor(null);
+        setCommunity(null);
       }
     }
-  }, [id]);
+  }, [id, currentUser]);
 
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this article?')) {
@@ -54,7 +62,35 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
 
   if (!article || !author) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-north-400" /></div>;
 
+  const canRead = db.canViewArticle(article, currentUser);
+  if (!canRead) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center">
+        <Link to="/" className="inline-flex items-center text-north-500 hover:text-north-800 mb-8 transition-colors">
+          <ArrowLeft size={20} className="mr-2" /> На главную
+        </Link>
+        <p className="text-north-700 text-lg">Эта публикация доступна только участникам сообщества («только для своих»).</p>
+        {community && (
+          <Link
+            to={`/community/${community.id}`}
+            className="inline-block mt-6 text-north-900 font-medium underline underline-offset-2"
+          >
+            Перейти в «{community.name}»
+          </Link>
+        )}
+        {!currentUser && (
+          <p className="mt-6 text-north-600">
+            <Link to="/login" state={{ from: id ? `/article/${id}` : '/' }} className="text-north-900 font-medium underline">
+              Войти в аккаунт
+            </Link>
+          </p>
+        )}
+      </div>
+    );
+  }
+
   const isOwner = currentUser?.id === article.authorId;
+  const canEdit = currentUser ? db.canEditArticle(currentUser.id, article) : false;
   const getCommentAuthor = (authorId: string) => users.find((u) => u.id === authorId);
 
   return (
@@ -64,7 +100,18 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
       </Link>
 
       <div className="mb-8">
-        <h1 className="font-serif text-4xl md:text-5xl font-bold text-north-900 mb-6 leading-tight">{article.title}</h1>
+        <h1 className="font-serif text-4xl md:text-5xl font-bold text-north-900 mb-4 leading-tight">{article.title}</h1>
+        <div className="flex flex-wrap gap-2 mb-6">
+          {(article.audience ?? 'public') === 'community_only' ? (
+            <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900">
+              Только для участников сообщества
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-900">
+              Публичная публикация
+            </span>
+          )}
+        </div>
         <div className="flex items-center justify-between border-b border-north-200 pb-6">
           <Link to={`/profile/${author.id}`} className="flex items-center gap-3 group">
             <img
@@ -77,16 +124,20 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
               <p className="text-sm text-north-500">{new Date(article.createdAt).toLocaleDateString()}</p>
             </div>
           </Link>
-          {isOwner && (
+          {(canEdit || isOwner) && (
             <div className="flex gap-2">
-              <Link to={`/edit/${article.id}`}>
-                <Button variant="secondary" className="px-3">
-                  <Edit2 size={16} />
+              {canEdit && (
+                <Link to={`/edit/${article.id}`}>
+                  <Button variant="secondary" className="px-3">
+                    <Edit2 size={16} />
+                  </Button>
+                </Link>
+              )}
+              {isOwner && (
+                <Button variant="danger" className="px-3" onClick={handleDelete}>
+                  <Trash2 size={16} />
                 </Button>
-              </Link>
-              <Button variant="danger" className="px-3" onClick={handleDelete}>
-                <Trash2 size={16} />
-              </Button>
+              )}
             </div>
           )}
         </div>
@@ -113,16 +164,28 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-12 border-b border-north-200 pb-8">
+      <div className="flex flex-wrap items-center gap-2 mb-10 border-b border-north-200 pb-8">
+        {community && <CommunityPostBadge communityId={community.id} name={community.name} />}
         {article.tags.map((tag) => (
           <Tag key={tag}>{tag}</Tag>
         ))}
       </div>
 
+      <div className="mb-10">
+        <p className="text-xs font-medium uppercase tracking-wide text-north-400 mb-2">Реакции</p>
+        <ArticleReactionsControl
+          article={article}
+          users={users}
+          currentUser={currentUser}
+          onUpdated={(a) => setArticle(a)}
+          richHover
+        />
+      </div>
+
       <div className="space-y-8">
         <h3 className="font-serif text-2xl font-bold text-north-900">Comments ({article.comments?.length || 0})</h3>
 
-        {currentUser && (
+        {currentUser ? (
           <div className="flex gap-4">
             <img src={currentUser.avatarUrl} alt={currentUser.fullName} className="w-10 h-10 rounded-full object-cover shrink-0" />
             <div className="flex-1">
@@ -139,6 +202,10 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
               </div>
             </div>
           </div>
+        ) : (
+          <p className="text-north-500">
+            Чтобы оставлять комментарии и ставить лайки, пожалуйста, <Link to="/login" className="text-north-800 underline">войдите в аккаунт</Link>.
+          </p>
         )}
 
         <div className="space-y-6">

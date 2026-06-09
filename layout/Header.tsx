@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, PenTool, Users } from 'lucide-react';
+import { LogOut, PenTool } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { User } from '../types';
 
@@ -12,7 +12,7 @@ type Props = {
 const Header: React.FC<Props> = ({ user, onLogout }) => {
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-north-200">
-      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group">
           <div className="w-8 h-8 bg-north-800 rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg group-hover:rotate-3 transition-transform">
             N
@@ -27,9 +27,6 @@ const Header: React.FC<Props> = ({ user, onLogout }) => {
                 <Button variant="secondary" className="hidden sm:flex text-sm">
                   <PenTool size={16} /> Написать
                 </Button>
-              </Link>
-              <Link to="/people" className="text-north-500 hover:text-north-900 transition-colors">
-                <Users size={20} />
               </Link>
               <div className="relative group">
                 <Link to={`/profile/${user.id}`}>

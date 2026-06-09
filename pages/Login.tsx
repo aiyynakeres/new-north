@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { User as UserType } from '../types';
@@ -16,6 +16,8 @@ const Login: React.FC<Props> = ({ onLogin }) => {
   const [touched, setTouched] = useState({ telegramHandle: false, authCode: false });
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as { from?: string } | null)?.from;
 
   const fieldErrors = useMemo(() => {
     const errors: { telegramHandle?: string; authCode?: string } = {};
@@ -59,7 +61,7 @@ const Login: React.FC<Props> = ({ onLogin }) => {
     if (user) {
       db.setSession(user);
       onLogin(user);
-      navigate('/');
+      navigate(redirectTo || '/', { replace: true });
     } else {
       setError('Invalid credentials');
     }
