@@ -17,7 +17,7 @@ const Header: React.FC<Props> = ({ user, onLogout }) => {
           <div className="w-8 h-8 bg-north-800 rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg group-hover:rotate-3 transition-transform">
             N
           </div>
-          <span className="font-serif font-bold text-xl text-north-800 tracking-tight">N-N</span>
+          <span className="font-serif font-bold text-xl text-north-800 tracking-tight">New-North</span>
         </Link>
 
         <nav className="flex items-center gap-4">
