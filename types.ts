@@ -16,6 +16,12 @@ export interface Comment {
   createdAt: string;
 }
 
+/** Реакция эмодзи к статье (как в iMessage) */
+export interface ArticleReaction {
+  emoji: string;
+  userId: string;
+}
+
 export type BlockType = 'paragraph' | 'h1' | 'h2' | 'image';
 
 export interface ArticleBlock {
@@ -24,9 +30,16 @@ export interface ArticleBlock {
   content: string; // text content or image URL
 }
 
+/** public — в общей ленте и у сообщества; community_only — только лента сообщества («только для своих») */
+export type ArticleAudience = 'public' | 'community_only';
+
 export interface Article {
   id: string;
   authorId: string;
+  /** Пост в ленте сообщества; если не задано — только в общей ленте */
+  communityId?: string;
+  /** По умолчанию public */
+  audience?: ArticleAudience;
   title: string;
   preview: string;
   content: string; // Deprecated: mainly used for preview generation or legacy articles
@@ -37,6 +50,23 @@ export interface Article {
   views: number;
   commentsCount: number; // Keep for list views
   comments?: Comment[]; // The actual comments
+  reactions?: ArticleReaction[];
+}
+
+/** Сообщество (аналог группы): создатель, админы, участники, блокировки */
+export interface Community {
+  id: string;
+  name: string;
+  /** Полное описание на странице клуба */
+  description: string;
+  /** Кратко о клубе — для карточки и списков (пишет админ при создании/редактировании) */
+  aboutShort: string;
+  coverUrl: string;
+  creatorId: string;
+  adminIds: string[];
+  memberIds: string[];
+  blockedUserIds: string[];
+  createdAt: string;
 }
 
 export enum ViewState {

@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Calendar, Camera, Image as ImageIcon, Loader2, Edit3, Save, X, Upload } from 'lucide-react';
+import { Calendar, Camera, Loader2, Edit3, Save, X, Upload, UserPlus, UserMinus } from 'lucide-react';
 import Button from '../components/ui/Button';
-import Tag from '../components/ui/Tag';
-import { Article as ArticleType, User as UserType } from '../types';
+import ArticleCard from '../components/articles/ArticleCard';
+import { Article as ArticleType, Community, User as UserType } from '../types';
 import { db } from '../services/mockDb';
 
 type Props = {
@@ -23,13 +23,18 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
   const [tagInput, setTagInput] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDragOverAvatar, setIsDragOverAvatar] = useState(false);
+  const [userCommunities, setUserCommunities] = useState<Community[]>([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [allUsers, setAllUsers] = useState<UserType[]>([]);
 
   useEffect(() => {
     if (id) {
       const u = db.getUserById(id);
       if (u) {
         setUser(u);
-        setUserArticles(db.getArticles().filter((a) => a.authorId === id));
+        setUserArticles(db.getArticlesForProfile(u.id, currentUser?.id));
+        setUserCommunities(db.getCommunitiesForMember(u.id));
+        setAllUsers(db.getUsers());
         setEditedBio(u.bio);
         setEditedTags([...u.tags]);
         setEditedBanner(u.bannerUrl);
@@ -37,7 +42,15 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
         setEditedTelegramHandle(u.telegramHandle);
       }
     }
-  }, [id]);
+  }, [id, currentUser?.id]);
+
+  useEffect(() => {
+    if (!user || !currentUser || currentUser.id === user.id) {
+      setIsFollowing(false);
+      return;
+    }
+    setIsFollowing(db.isFollowingUser(currentUser.id, user.id));
+  }, [user, currentUser]);
 
   const addTag = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && tagInput.trim()) {
@@ -125,6 +138,17 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
     setEditedTelegramHandle(user?.telegramHandle || '');
     setTagInput('');
     setIsEditing(false);
+  };
+
+  const toggleFollow = () => {
+    if (!currentUser || !user || currentUser.id === user.id) return;
+    if (db.isFollowingUser(currentUser.id, user.id)) {
+      db.unfollowUser(currentUser.id, user.id);
+      setIsFollowing(false);
+    } else {
+      db.followUser(currentUser.id, user.id);
+      setIsFollowing(true);
+    }
   };
 
   if (!user) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-north-400" /></div>;
@@ -220,6 +244,35 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
           {!isEditing && (
             <p className="text-north-500 mb-4">@{user.telegramHandle}</p>
           )}
+          {!isEditing && !isOwnProfile && (
+            <div className="mb-6">
+              {currentUser ? (
+                <Button
+                  type="button"
+                  variant={isFollowing ? 'secondary' : 'primary'}
+                  onClick={toggleFollow}
+                  className="flex items-center gap-2"
+                >
+                  {isFollowing ? (
+                    <>
+                      <UserMinus size={16} /> Отписаться
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus size={16} /> Подписаться
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <p className="text-sm text-north-600">
+                  <Link to="/login" state={{ from: `/profile/${user.id}` }} className="text-north-900 font-medium underline underline-offset-2">
+                    Войдите
+                  </Link>
+                  , чтобы подписаться на этого участника.
+                </p>
+              )}
+            </div>
+          )}
           {isEditing ? (
             <div className="space-y-4">
               <div className="w-full">
@@ -256,11 +309,24 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
           ) : (
             <>
               <p className="text-north-500 mb-4">{user.bio}</p>
-              <div className="flex gap-2 mb-4">
+              <div className="flex flex-wrap gap-2 mb-3">
                 {user.tags.map((tag) => (
                   <Tag key={tag}>{tag}</Tag>
                 ))}
               </div>
+              {userCommunities.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {userCommunities.map((c) => (
+                    <Link
+                      key={c.id}
+                      to={`/community/${c.id}`}
+                      className="inline-flex items-center rounded-full border border-north-300 bg-white px-3 py-1 text-xs font-medium text-north-700 shadow-sm hover:border-north-500 hover:bg-north-50 transition-colors"
+                    >
+                      {c.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </>
           )}
           <div className="flex gap-6 text-sm text-north-400">
@@ -272,27 +338,18 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
 
         <div className="border-t border-north-200 pt-8">
           <h2 className="font-serif text-xl font-bold text-north-900 mb-6">Articles</h2>
-          <div className="grid gap-6">
+          <div className="space-y-6">
             {userArticles.map((article) => (
-              <div key={article.id} className="flex gap-4 p-4 rounded-xl hover:bg-north-50 transition-colors border border-transparent hover:border-north-100">
-                <div className="flex-1">
-                  <Link to={`/article/${article.id}`}>
-                    <h3 className="font-bold text-north-800 mb-1">{article.title}</h3>
-                    <p className="text-sm text-north-600 line-clamp-2">{article.preview}</p>
-                  </Link>
-                  <div className="flex gap-4 mt-3 text-xs text-north-400">
-                    <span>{new Date(article.createdAt).toLocaleDateString()}</span>
-                    <span>{article.views} views</span>
-                  </div>
-                </div>
-                {article.preview && (
-                  <div className="w-24 h-24 bg-north-100 rounded-lg shrink-0 overflow-hidden hidden sm:block">
-                    <div className="w-full h-full flex items-center justify-center text-north-300">
-                      <ImageIcon size={24} />
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ArticleCard
+                key={article.id}
+                article={article}
+                author={user}
+                community={article.communityId ? db.getCommunityById(article.communityId) : undefined}
+                users={allUsers}
+                currentUser={currentUser}
+                showAuthor={!isOwnProfile}
+                onArticleUpdated={(a) => setUserArticles((prev) => prev.map((x) => (x.id === a.id ? a : x)))}
+              />
             ))}
             {userArticles.length === 0 && <p className="text-north-400 italic">No articles published yet.</p>}
           </div>

@@ -1,9 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Heading, Heading2, Image as ImageIcon, Loader2, MoveDown, MoveUp, Sparkles, Trash2, Type } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Tag from '../components/ui/Tag';
-import { Article as ArticleType, ArticleBlock, BlockType, User as UserType } from '../types';
+import {
+  Article as ArticleType,
+  ArticleAudience,
+  ArticleBlock,
+  BlockType,
+  Community,
+  User as UserType,
+} from '../types';
 import { db } from '../services/mockDb';
 import { generateTags } from '../services/geminiService';
 
@@ -13,18 +20,28 @@ type Props = {
 
 const Editor: React.FC<Props> = ({ currentUser }) => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [blocks, setBlocks] = useState<ArticleBlock[]>([{ id: `b-${Date.now()}`, type: 'paragraph', content: '' }]);
   const [tags, setTags] = useState<string[]>([]);
   const [loadingAI, setLoadingAI] = useState(false);
+  const [myCommunities, setMyCommunities] = useState<Community[]>([]);
+  const [communityId, setCommunityId] = useState<string>('');
+  const [audience, setAudience] = useState<ArticleAudience>('public');
+
+  useEffect(() => {
+    setMyCommunities(db.getCommunitiesForMember(currentUser.id));
+  }, [currentUser.id]);
 
   useEffect(() => {
     if (id) {
       const existing = db.getArticleById(id);
-      if (existing && existing.authorId === currentUser.id) {
+      if (existing && db.canEditArticle(currentUser.id, existing)) {
         setTitle(existing.title);
         setTags(existing.tags);
+        setCommunityId(existing.communityId || '');
+        setAudience(existing.audience ?? 'public');
         if (existing.blocks) {
           setBlocks(existing.blocks);
         } else {
@@ -42,11 +59,41 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
     }
   }, [id, currentUser.id, navigate]);
 
+  useEffect(() => {
+    if (!communityId) setAudience('public');
+  }, [communityId]);
+
+  useEffect(() => {
+    if (id) return;
+    const fromUrl = searchParams.get('community');
+    if (!fromUrl) return;
+    const c = db.getCommunityById(fromUrl);
+    if (c?.memberIds.includes(currentUser.id)) {
+      setCommunityId(fromUrl);
+    }
+  }, [id, searchParams, currentUser.id]);
+
   const handleSave = () => {
     if (!title.trim()) {
       alert('Title is required');
       return;
     }
+
+    const existing = id ? db.getArticleById(id) : undefined;
+    let resolvedCommunityId = communityId || undefined;
+    if (existing && existing.authorId !== currentUser.id) {
+      resolvedCommunityId = existing.communityId;
+    }
+    if (resolvedCommunityId) {
+      const c = db.getCommunityById(resolvedCommunityId);
+      if (!c?.memberIds.includes(currentUser.id)) {
+        alert('Вы не состоите в выбранном сообществе');
+        return;
+      }
+    }
+
+    const resolvedAudience: ArticleAudience =
+      !resolvedCommunityId ? 'public' : audience;
 
     const previewText =
       blocks
@@ -57,7 +104,9 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
 
     const article: ArticleType = {
       id: id || `a${Date.now()}`,
-      authorId: currentUser.id,
+      authorId: existing?.authorId ?? currentUser.id,
+      communityId: resolvedCommunityId,
+      audience: resolvedAudience,
       title,
       preview: previewText,
       content: 'See blocks',
@@ -68,6 +117,7 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
       views: id ? db.getArticleById(id)?.views || 0 : 0,
       commentsCount: id ? db.getArticleById(id)?.commentsCount || 0 : 0,
       comments: id ? db.getArticleById(id)?.comments || [] : [],
+      reactions: id ? db.getArticleById(id)?.reactions ?? [] : [],
     };
 
     db.saveArticle(article);
@@ -105,6 +155,18 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
     setBlocks(newBlocks);
   };
 
+  const existingArticle = id ? db.getArticleById(id) : undefined;
+  const canPickCommunity = !existingArticle || existingArticle.authorId === currentUser.id;
+
+  const communityOptions = useMemo(() => {
+    const list = [...myCommunities];
+    if (communityId && !list.some((c) => c.id === communityId)) {
+      const c = db.getCommunityById(communityId);
+      if (c) list.unshift(c);
+    }
+    return list;
+  }, [myCommunities, communityId]);
+
   const handleImageUpload = (blockId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -132,6 +194,85 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
+
+        <div className="mb-8">
+          <label className="block text-sm font-medium text-north-600 mb-2">Публикация</label>
+          {canPickCommunity ? (
+            <select
+              className="w-full max-w-md px-4 py-2 rounded-lg border border-north-200 bg-white text-north-800 focus:outline-none focus:ring-2 focus:ring-north-400"
+              value={communityId}
+              onChange={(e) => setCommunityId(e.target.value)}
+            >
+              <option value="">Только в общей ленте</option>
+              {communityOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          ) : existingArticle?.communityId ? (
+            <p className="text-sm text-north-600">
+              Сообщество:{' '}
+              <Link to={`/community/${existingArticle.communityId}`} className="text-north-800 underline">
+                {db.getCommunityById(existingArticle.communityId)?.name}
+              </Link>{' '}
+              (только автор может перенести пост в другое сообщество)
+            </p>
+          ) : (
+            <p className="text-sm text-north-500">Общая лента</p>
+          )}
+          {canPickCommunity && myCommunities.length === 0 && (
+            <p className="text-xs text-north-400 mt-2">
+              Вступите в сообщество в разделе{' '}
+              <Link to="/communities" className="underline">
+                «Сообщества»
+              </Link>
+              .
+            </p>
+          )}
+        </div>
+
+        {canPickCommunity && (
+          <div className="mb-8 rounded-xl border border-north-200 bg-white p-4">
+            <label className="block text-sm font-medium text-north-700 mb-3">Видимость</label>
+            <div className="space-y-3">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="radio"
+                  name="audience"
+                  className="mt-1 text-north-800"
+                  checked={audience === 'public'}
+                  onChange={() => setAudience('public')}
+                />
+                <span>
+                  <span className="font-medium text-north-900">Публичная статья</span>
+                  <span className="block text-xs text-north-500 mt-0.5">
+                    Появится в общей ленте и в ленте сообщества (если выбран клуб).
+                  </span>
+                </span>
+              </label>
+              <label
+                className={`flex items-start gap-3 ${!communityId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+              >
+                <input
+                  type="radio"
+                  name="audience"
+                  className="mt-1 text-north-800"
+                  checked={audience === 'community_only'}
+                  disabled={!communityId}
+                  onChange={() => setAudience('community_only')}
+                />
+                <span>
+                  <span className="font-medium text-north-900">Только для своих</span>
+                  <span className="block text-xs text-north-500 mt-0.5">
+                    Только участники выбранного сообщества; в общей ленте не показывается. Сначала выберите сообщество
+                    выше.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           {blocks.map((block, index) => (
