@@ -142,4 +142,19 @@ export const api = {
 
   getUserArticles: (userId: string) =>
     request<Article[]>(`/users/${userId}/articles`),
+
+  // Aliases (legacy callers)
+  getAuthorsLeaderboard: () => api.getLeaderboard(),
+  getCommunitiesByMemberCount: () => api.getCommunities(),
+  getUserById: (id: string) => api.getUser(id),
+  getArticlesForProfile: (userId: string) => api.getUserArticles(userId),
+  isFollowingUser: (currentUserId: string, targetId: string) => api.isFollowing(targetId),
+  saveUser: (data: Partial<User>) => api.updateProfile(data.id!, data),
+  verifyAuthCode: (telegramHandle: string, code: string) => api.verifyCode(telegramHandle, code),
+  getArticlesByCommunityId: (communityId: string) => api.getCommunityArticles(communityId),
+  promoteCommunityAdmin: (communityId: string, _currentUserId: string, targetId: string) =>
+    api.promoteMember(communityId, targetId),
+  blockUserFromCommunity: (communityId: string, _currentUserId: string, targetId: string) =>
+    api.blockUser(communityId, targetId),
+  getArticles: () => api.getFeed(),
 };
