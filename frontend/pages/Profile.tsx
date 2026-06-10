@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Calendar, Camera, Loader2, Edit3, Save, X, Upload, UserPlus, UserMinus } from 'lucide-react';
 import Button from '../components/ui/Button';
+import Tag from '../components/ui/Tag';
 import ArticleCard from '../components/articles/ArticleCard';
 import { Article as ArticleType, Community, User as UserType } from '../types';
 import { api } from '../services/api';

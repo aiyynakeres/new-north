@@ -57,11 +57,15 @@ const Login: React.FC<Props> = ({ onLogin }) => {
     }
 
     setError('');
-    const user = await api.verifyAuthCode(telegramHandle.trim(), authCode.trim());
-    if (user) {
-      onLogin(user);
-      navigate(redirectTo || '/', { replace: true });
-    } else {
+    try {
+      const user = await api.verifyAuthCode(telegramHandle.trim(), authCode.trim());
+      if (user) {
+        onLogin(user);
+        navigate(redirectTo || '/', { replace: true });
+      } else {
+        setError('Invalid credentials');
+      }
+    } catch {
       setError('Invalid credentials');
     }
   };

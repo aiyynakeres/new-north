@@ -20,6 +20,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
   const res = await fetch(`${BASE}${url}`, { ...options, headers });
   const text = await res.text();
+  if (!res.ok) throw new Error(text || res.statusText);
   if (!text) return undefined as unknown as T;
   return JSON.parse(text);
 }
@@ -157,4 +158,6 @@ export const api = {
   blockUserFromCommunity: (communityId: string, _currentUserId: string, targetId: string) =>
     api.blockUser(communityId, targetId),
   getArticles: () => api.getFeed(),
+  toggleArticleReaction: (articleId: string, _currentUserId: string, emoji: string) =>
+    api.toggleReaction(articleId, emoji),
 };
