@@ -7,10 +7,7 @@ services:
       - PORT=8080
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    build: ./frontend
     ports:
       - "80:80"
     depends_on:

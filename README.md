@@ -36,12 +36,6 @@ Starts on `:3000`, proxies `/api` to `localhost:8080`.
 ## Running with Docker Compose
 
 ```sh
-GEMINI_API_KEY=<your-key> docker compose up --build
-```
-
-Or without the AI features:
-
-```sh
 docker compose up --build
 ```
 
@@ -50,7 +44,6 @@ docker compose up --build
 
 ## Environment variables
 
-| Variable         | Default  | Description                            |
-|------------------|----------|----------------------------------------|
-| `PORT`           | `8080`   | Backend listen port                    |
-| `GEMINI_API_KEY` | —        | Google Gemini API key (AI features)    |
+| Variable | Default | Description         |
+|----------|---------|---------------------|
+| `PORT`   | `8080`  | Backend listen port |

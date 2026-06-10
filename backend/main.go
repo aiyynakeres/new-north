@@ -24,7 +24,6 @@ func main() {
 	userH := &handlers.UserHandler{Store: st}
 	articleH := &handlers.ArticleHandler{Store: st}
 	communityH := &handlers.CommunityHandler{Store: st}
-	aiH := &handlers.AIHandler{}
 
 	// Build token map from sessions
 	authMiddleware := middleware.Auth(st.LookupToken)
@@ -81,10 +80,6 @@ func main() {
 	r.With(authMiddleware).Post("/api/communities/{id}/promote", communityH.Promote)
 	r.With(authMiddleware).Post("/api/communities/{id}/block", communityH.Block)
 	r.With(authMiddleware).Get("/api/communities/my", communityH.MyCommunities)
-
-	// AI routes
-	r.Post("/api/ai/generate-tags", aiH.GenerateTags)
-	r.Post("/api/ai/enhance-text", aiH.EnhanceText)
 
 	// Health check
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
