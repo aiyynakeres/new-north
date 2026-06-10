@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Users } from 'lucide-react';
 import { Community, User } from '../../types';
-import { db } from '../../services/mockDb';
+import { api } from '../../services/api';
 
 const TOP_LIMIT = 5;
 
@@ -11,8 +11,14 @@ const FeedSidebar: React.FC = () => {
   const [topCommunities, setTopCommunities] = useState<Community[]>([]);
 
   useEffect(() => {
-    setTopAuthors(db.getAuthorsLeaderboard().slice(0, TOP_LIMIT));
-    setTopCommunities(db.getCommunitiesByMemberCount().slice(0, TOP_LIMIT));
+    (async () => {
+      const [authors, comms] = await Promise.all([
+        api.getAuthorsLeaderboard(),
+        api.getCommunitiesByMemberCount(),
+      ]);
+      setTopAuthors(authors.slice(0, TOP_LIMIT));
+      setTopCommunities(comms.slice(0, TOP_LIMIT));
+    })();
   }, []);
 
   return (

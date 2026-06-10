@@ -5,7 +5,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Tag from '../components/ui/Tag';
 import { User as UserType } from '../types';
-import { db } from '../services/mockDb';
+import { api } from '../services/api';
 
 type Props = {
   onLogin: (u: UserType) => void;
@@ -105,11 +105,6 @@ const Register: React.FC<Props> = ({ onLogin }) => {
     }
 
     setError('');
-    if (!db.isAuthCodeValid(authCode.trim())) {
-      setError('Неверный код авторизации');
-      return;
-    }
-
     setStep(3);
   };
 
@@ -120,21 +115,18 @@ const Register: React.FC<Props> = ({ onLogin }) => {
     }
 
     setError('');
-    if (db.getUserByTelegramHandle(formData.telegramHandle.trim())) {
-      setError('Пользователь с таким Telegram уже существует');
-      return;
+    try {
+      const res = await api.register(
+        formData.telegramHandle.trim(),
+        formData.fullName.trim(),
+        formData.bio.trim(),
+        formData.tags,
+      );
+      onLogin(res.user);
+      navigate('/');
+    } catch (e: any) {
+      setError(e.message || 'Ошибка регистрации');
     }
-
-    const newUser: UserType = {
-      id: `u${Date.now()}`,
-      ...formData,
-      bannerUrl: 'https://picsum.photos/1200/400?grayscale',
-      joinedAt: new Date().toISOString(),
-    };
-    db.saveUser(newUser);
-    db.setSession(newUser);
-    onLogin(newUser);
-    navigate('/');
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {

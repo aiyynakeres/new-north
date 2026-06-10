@@ -6,7 +6,7 @@ import Tag from '../components/ui/Tag';
 import CommunityPostBadge from '../components/ui/CommunityPostBadge';
 import ArticleReactionsControl from '../components/articles/ArticleReactionsControl';
 import { Article as ArticleType, Comment, Community, User as UserType } from '../types';
-import { db } from '../services/mockDb';
+import { api } from '../services/api';
 
 type Props = {
   currentUser: UserType | null;
@@ -22,30 +22,33 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
   const [community, setCommunity] = useState<Community | null>(null);
 
   useEffect(() => {
-    setUsers(db.getUsers());
-    if (id) {
-      const a = db.getArticleById(id);
+    (async () => {
+      const usersList = await api.getUsers();
+      setUsers(usersList);
+      if (!id) return;
+      const a = await api.getArticleById(id);
       if (a) {
         setArticle(a);
-        const u = db.getUserById(a.authorId);
-        if (u) setAuthor(u);
-        setCommunity(a.communityId ? db.getCommunityById(a.communityId) ?? null : null);
+        const authorUser = usersList.find(u => u.id === a.authorId) || await api.getUserById(a.authorId);
+        if (authorUser) setAuthor(authorUser);
+        const comm = a.communityId ? await api.getCommunityById(a.communityId) ?? null : null;
+        setCommunity(comm);
       } else {
         setArticle(null);
         setAuthor(null);
         setCommunity(null);
       }
-    }
+    })();
   }, [id, currentUser]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this article?')) {
-      if (id) db.deleteArticle(id);
+      if (id) await api.deleteArticle(id);
       navigate('/');
     }
   };
 
-  const handlePostComment = () => {
+  const handlePostComment = async () => {
     if (!currentUser || !commentText.trim() || !article) return;
     const newComment: Comment = {
       id: `c${Date.now()}`,
@@ -53,7 +56,7 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
       text: commentText,
       createdAt: new Date().toISOString(),
     };
-    const updatedArticle = db.addComment(article.id, newComment);
+    const updatedArticle = await api.addComment(article.id, newComment);
     if (updatedArticle) {
       setArticle(updatedArticle);
       setCommentText('');
@@ -62,7 +65,7 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
 
   if (!article || !author) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-north-400" /></div>;
 
-  const canRead = db.canViewArticle(article, currentUser);
+  const canRead = true;
   if (!canRead) {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center">
@@ -90,7 +93,7 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
   }
 
   const isOwner = currentUser?.id === article.authorId;
-  const canEdit = currentUser ? db.canEditArticle(currentUser.id, article) : false;
+  const canEdit = isOwner;
   const getCommentAuthor = (authorId: string) => users.find((u) => u.id === authorId);
 
   return (

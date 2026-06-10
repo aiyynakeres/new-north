@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { SmilePlus } from 'lucide-react';
 import { Article as ArticleType, User as UserType } from '../../types';
-import { db } from '../../services/mockDb';
+import { api } from '../../services/api';
 import { groupReactionsByEmoji, userHasReaction } from '../../utils/reactions';
 
 export const QUICK_EMOJIS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏', '🙏'];
@@ -21,9 +21,9 @@ const ArticleReactionsControl: React.FC<Props> = ({ article, users, currentUser,
   const grouped = useMemo(() => groupReactionsByEmoji(article.reactions), [article.reactions]);
   const nameFor = (userId: string) => users.find((u) => u.id === userId)?.fullName || userId;
 
-  const handleEmoji = (emoji: string) => {
+  const handleEmoji = async (emoji: string) => {
     if (!currentUser || !onUpdated) return;
-    const updated = db.toggleArticleReaction(article.id, currentUser.id, emoji);
+    const updated = await api.toggleArticleReaction(article.id, currentUser.id, emoji);
     if (updated) onUpdated(updated);
   };
 

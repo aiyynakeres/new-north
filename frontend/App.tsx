@@ -13,7 +13,7 @@ import CommunityView from './pages/CommunityView';
 import CommunityMembers from './pages/CommunityMembers';
 import Editor from './pages/Editor';
 import { User as UserType } from './types';
-import { db } from './services/mockDb';
+import { api } from './services/api';
 import { Loader2 } from 'lucide-react';
 
 function WriteRoute({ user }: { user: UserType | null }) {
@@ -31,13 +31,15 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const session = db.getSession();
-    if (session) setUser(session);
-    setLoading(false);
+    (async () => {
+      const session = await api.getSession();
+      if (session) setUser(session);
+      setLoading(false);
+    })();
   }, []);
 
   const handleLogout = () => {
-    db.clearSession();
+    api.clearSession();
     setUser(null);
   };
 

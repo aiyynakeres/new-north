@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { User as UserType } from '../types';
-import { db } from '../services/mockDb';
+import { api } from '../services/api';
 
 type Props = {
   onLogin: (u: UserType) => void;
@@ -50,16 +50,15 @@ const Login: React.FC<Props> = ({ onLogin }) => {
     setStep(2);
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!isStepTwoValid) {
       setTouched((prev) => ({ ...prev, authCode: true }));
       return;
     }
 
     setError('');
-    const user = db.verifyAuthCode(telegramHandle.trim(), authCode.trim());
+    const user = await api.verifyAuthCode(telegramHandle.trim(), authCode.trim());
     if (user) {
-      db.setSession(user);
       onLogin(user);
       navigate(redirectTo || '/', { replace: true });
     } else {
