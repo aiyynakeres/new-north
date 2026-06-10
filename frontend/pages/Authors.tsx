@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { User as UserType } from '../types';
-import { db } from '../services/mockDb';
+import { api } from '../services/api';
 
 const Authors: React.FC = () => {
   const [rows, setRows] = useState<{ user: UserType; articleCount: number }[]>([]);
 
   useEffect(() => {
-    setRows(db.getAuthorsLeaderboard());
+    (async () => setRows(await api.getAuthorsLeaderboard()))();
   }, []);
 
   return (
