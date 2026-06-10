@@ -126,15 +126,6 @@ type AddCommentInput struct {
 	Text string `json:"text"`
 }
 
-type AIEnhanceInput struct {
-	Text string `json:"text"`
-	Type string `json:"type"`
-}
-
-type AITagsInput struct {
-	Content string `json:"content"`
-}
-
 func NewID() string {
 	return "id_" + time.Now().Format("150405.000000000")
 }

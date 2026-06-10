@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Heading, Heading2, Image as ImageIcon, Loader2, MoveDown, MoveUp, Sparkles, Trash2, Type } from 'lucide-react';
+import { Heading, Heading2, Image as ImageIcon, MoveDown, MoveUp, Trash2, Type } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Tag from '../components/ui/Tag';
 import {
@@ -24,7 +24,6 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
   const [title, setTitle] = useState('');
   const [blocks, setBlocks] = useState<ArticleBlock[]>([{ id: `b-${Date.now()}`, type: 'paragraph', content: '' }]);
   const [tags, setTags] = useState<string[]>([]);
-  const [loadingAI, setLoadingAI] = useState(false);
   const [myCommunities, setMyCommunities] = useState<Community[]>([]);
   const [communityId, setCommunityId] = useState<string>('');
   const [audience, setAudience] = useState<ArticleAudience>('public');
@@ -127,23 +126,6 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
 
     await api.saveArticle(article);
     navigate('/');
-  };
-
-  const handleAutoTag = async () => {
-    setLoadingAI(true);
-    const fullText = blocks.map((b) => b.content).join('\n');
-    try {
-      const res = await fetch('/api/ai/generate-tags', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: fullText }),
-      });
-      const newTags = await res.json();
-      setTags(newTags);
-    } catch {
-      setTags(['general', 'life']);
-    }
-    setLoadingAI(false);
   };
 
   const addBlock = (type: BlockType) => {
@@ -405,10 +387,7 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
       <div className="mt-12 pt-6 border-t border-north-200">
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium text-north-600">Tags</label>
-          <button onClick={handleAutoTag} className="text-xs text-north-500 hover:text-north-800 flex items-center gap-1">
-            {loadingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-            Auto-generate tags
-          </button>
+
         </div>
         <div className="flex flex-wrap gap-2">
           {tags.map((tag) => (
