@@ -45,6 +45,8 @@ export const api = {
     }),
 
   getMe: () => request<User>('/auth/me'),
+  getSession: () => request<User | null>('/auth/me').catch(() => null),
+  clearSession: () => localStorage.removeItem('token'),
 
   // Users
   getUsers: () => request<User[]>('/users'),
