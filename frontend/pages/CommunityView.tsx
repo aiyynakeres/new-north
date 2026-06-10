@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Loader2, PenTool, Users } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { Article as ArticleType, Community, User as UserType } from '../types';
-import { db } from '../services/mockDb';
+import { api } from '../services/api';
 
 type Props = {
   currentUser: UserType | null;
@@ -17,12 +17,16 @@ const CommunityView: React.FC<Props> = ({ currentUser }) => {
   const [users, setUsers] = useState<UserType[]>([]);
   const [msg, setMsg] = useState('');
 
-  const refresh = () => {
+  const refresh = async () => {
     if (!id) return;
-    const c = db.getCommunityById(id);
+    const [c, articles, users] = await Promise.all([
+      api.getCommunityById(id),
+      api.getArticlesByCommunityId(id),
+      api.getUsers(),
+    ]);
     setCommunity(c || null);
-    setArticles(db.getArticlesByCommunityId(id).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)));
-    setUsers(db.getUsers());
+    setArticles(articles.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)));
+    setUsers(users);
   };
 
   useEffect(() => {
@@ -45,35 +49,35 @@ const CommunityView: React.FC<Props> = ({ currentUser }) => {
     return handles;
   }, [community, users]);
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!currentUser || !community) return;
     setMsg('');
-    const r = db.joinCommunity(community.id, currentUser.id);
+    const r = await api.joinCommunity(community.id, currentUser.id);
     if (!r.ok && r.error === 'blocked') setMsg('Вам закрыт доступ к этому сообществу.');
-    refresh();
+    await refresh();
   };
 
-  const handleLeave = () => {
+  const handleLeave = async () => {
     if (!currentUser || !community) return;
     setMsg('');
-    const r = db.leaveCommunity(community.id, currentUser.id);
+    const r = await api.leaveCommunity(community.id, currentUser.id);
     if (!r.ok && r.error === 'creator_cannot_leave') {
       setMsg('Создатель не может покинуть сообщество (передайте права или удалите группу в будущей версии).');
     }
-    refresh();
+    await refresh();
   };
 
-  const handlePromote = (targetId: string) => {
+  const handlePromote = async (targetId: string) => {
     if (!currentUser || !community) return;
-    db.promoteCommunityAdmin(community.id, currentUser.id, targetId);
-    refresh();
+    await api.promoteCommunityAdmin(community.id, currentUser.id, targetId);
+    await refresh();
   };
 
-  const handleBlock = (targetId: string) => {
+  const handleBlock = async (targetId: string) => {
     if (!currentUser || !community) return;
-    const r = db.blockUserFromCommunity(community.id, currentUser.id, targetId);
+    const r = await api.blockUserFromCommunity(community.id, currentUser.id, targetId);
     if (!r.ok && r.error === 'cannot_block_creator') setMsg('Нельзя заблокировать создателя.');
-    refresh();
+    await refresh();
   };
 
   const handleJoinClick = () => {

@@ -4,7 +4,7 @@ import { Calendar, Camera, Loader2, Edit3, Save, X, Upload, UserPlus, UserMinus 
 import Button from '../components/ui/Button';
 import ArticleCard from '../components/articles/ArticleCard';
 import { Article as ArticleType, Community, User as UserType } from '../types';
-import { db } from '../services/mockDb';
+import { api } from '../services/api';
 
 type Props = {
   currentUser: UserType | null;
@@ -28,20 +28,28 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
   const [allUsers, setAllUsers] = useState<UserType[]>([]);
 
   useEffect(() => {
-    if (id) {
-      const u = db.getUserById(id);
+    if (!id) return;
+    (async () => {
+      const u = await api.getUserById(id);
       if (u) {
         setUser(u);
-        setUserArticles(db.getArticlesForProfile(u.id, currentUser?.id));
-        setUserCommunities(db.getCommunitiesForMember(u.id));
-        setAllUsers(db.getUsers());
+        const [articles, communities, allU, following] = await Promise.all([
+          api.getArticlesForProfile(u.id, currentUser?.id),
+          api.getCommunitiesForMember(u.id),
+          api.getUsers(),
+          currentUser && currentUser.id !== u.id ? api.isFollowingUser(currentUser.id, u.id) : Promise.resolve(false),
+        ]);
+        setUserArticles(articles);
+        setUserCommunities(communities);
+        setAllUsers(allU);
+        setIsFollowing(following);
         setEditedBio(u.bio);
         setEditedTags([...u.tags]);
         setEditedBanner(u.bannerUrl);
         setEditedAvatar(u.avatarUrl);
         setEditedTelegramHandle(u.telegramHandle);
       }
-    }
+    })();
   }, [id, currentUser?.id]);
 
   useEffect(() => {
@@ -49,7 +57,7 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
       setIsFollowing(false);
       return;
     }
-    setIsFollowing(db.isFollowingUser(currentUser.id, user.id));
+    (async () => setIsFollowing(await api.isFollowingUser(currentUser.id, user.id)))();
   }, [user, currentUser]);
 
   const addTag = (e: React.KeyboardEvent) => {
@@ -114,7 +122,7 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (user) {
       const updatedUser = { 
         ...user, 
@@ -124,7 +132,7 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
         avatarUrl: editedAvatar,
         telegramHandle: editedTelegramHandle
       };
-      db.saveUser(updatedUser);
+      await api.saveUser(updatedUser);
       setUser(updatedUser);
       setIsEditing(false);
     }
@@ -140,13 +148,13 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
     setIsEditing(false);
   };
 
-  const toggleFollow = () => {
+  const toggleFollow = async () => {
     if (!currentUser || !user || currentUser.id === user.id) return;
-    if (db.isFollowingUser(currentUser.id, user.id)) {
-      db.unfollowUser(currentUser.id, user.id);
+    if (await api.isFollowingUser(currentUser.id, user.id)) {
+      await api.unfollowUser(currentUser.id, user.id);
       setIsFollowing(false);
     } else {
-      db.followUser(currentUser.id, user.id);
+      await api.followUser(currentUser.id, user.id);
       setIsFollowing(true);
     }
   };
@@ -344,7 +352,7 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
                 key={article.id}
                 article={article}
                 author={user}
-                community={article.communityId ? db.getCommunityById(article.communityId) : undefined}
+                community={article.communityId ? userCommunities.find(c => c.id === article.communityId) : undefined}
                 users={allUsers}
                 currentUser={currentUser}
                 showAuthor={!isOwnProfile}
