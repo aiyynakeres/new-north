@@ -1,246 +1,311 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Edit2, Loader2, Trash2 } from 'lucide-react';
-import Button from '../components/ui/Button';
-import Tag from '../components/ui/Tag';
-import CommunityPostBadge from '../components/ui/CommunityPostBadge';
-import ArticleReactionsControl from '../components/articles/ArticleReactionsControl';
-import { Article as ArticleType, Comment, Community, User as UserType } from '../types';
-import { api } from '../services/api';
+import { ArrowLeft, Edit2, Loader2, Trash2 } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import ArticleReactionsControl from "../components/articles/ArticleReactionsControl";
+import Button from "../components/ui/Button";
+import CommunityPostBadge from "../components/ui/CommunityPostBadge";
+import Tag from "../components/ui/Tag";
+import { api } from "../services/api";
+import type { Article as ArticleType, Comment, Community, User as UserType } from "../types";
 
 type Props = {
-  currentUser: UserType | null;
+	currentUser: UserType | null;
 };
 
 const ArticleView: React.FC<Props> = ({ currentUser }) => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [article, setArticle] = useState<ArticleType | null>(null);
-  const [author, setAuthor] = useState<UserType | null>(null);
-  const [commentText, setCommentText] = useState('');
-  const [users, setUsers] = useState<UserType[]>([]);
-  const [community, setCommunity] = useState<Community | null>(null);
+	const { id } = useParams<{ id: string }>();
+	const navigate = useNavigate();
+	const [article, setArticle] = useState<ArticleType | null>(null);
+	const [author, setAuthor] = useState<UserType | null>(null);
+	const [commentText, setCommentText] = useState("");
+	const [users, setUsers] = useState<UserType[]>([]);
+	const [community, setCommunity] = useState<Community | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const usersList = await api.getUsers();
-      setUsers(usersList);
-      if (!id) return;
-      const a = await api.getArticleById(id);
-      if (a) {
-        setArticle(a);
-        const authorUser = usersList.find(u => u.id === a.authorId) || await api.getUserById(a.authorId);
-        if (authorUser) setAuthor(authorUser);
-        const comm = a.communityId ? await api.getCommunityById(a.communityId) ?? null : null;
-        setCommunity(comm);
-      } else {
-        setArticle(null);
-        setAuthor(null);
-        setCommunity(null);
-      }
-    })();
-  }, [id, currentUser]);
+	useEffect(() => {
+		(async () => {
+			const usersList = await api.getUsers();
+			setUsers(usersList);
+			if (!id) return;
+			const a = await api.getArticleById(id);
+			if (a) {
+				setArticle(a);
+				const authorUser =
+					usersList.find((u) => u.id === a.authorId) || (await api.getUserById(a.authorId));
+				if (authorUser) setAuthor(authorUser);
+				const comm = a.communityId ? ((await api.getCommunityById(a.communityId)) ?? null) : null;
+				setCommunity(comm);
+			} else {
+				setArticle(null);
+				setAuthor(null);
+				setCommunity(null);
+			}
+		})();
+	}, [id]);
 
-  const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this article?')) {
-      if (id) await api.deleteArticle(id);
-      navigate('/');
-    }
-  };
+	const handleDelete = async () => {
+		if (window.confirm("Are you sure you want to delete this article?")) {
+			if (id) await api.deleteArticle(id);
+			navigate("/");
+		}
+	};
 
-  const handlePostComment = async () => {
-    if (!currentUser || !commentText.trim() || !article) return;
-    const newComment: Comment = {
-      id: `c${Date.now()}`,
-      authorId: currentUser.id,
-      text: commentText,
-      createdAt: new Date().toISOString(),
-    };
-    const updatedArticle = await api.addComment(article.id, newComment);
-    if (updatedArticle) {
-      setArticle(updatedArticle);
-      setCommentText('');
-    }
-  };
+	const handlePostComment = async () => {
+		if (!currentUser || !commentText.trim() || !article) return;
+		const newComment: Comment = {
+			id: `c${Date.now()}`,
+			authorId: currentUser.id,
+			text: commentText,
+			createdAt: new Date().toISOString(),
+		};
+		const updatedArticle = await api.addComment(article.id, newComment);
+		if (updatedArticle) {
+			setArticle(updatedArticle);
+			setCommentText("");
+		}
+	};
 
-  if (!article || !author) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-north-400" /></div>;
+	if (!article || !author)
+		return (
+			<div className="flex justify-center p-20">
+				<Loader2 className="animate-spin text-north-400" />
+			</div>
+		);
 
-  const canRead = true;
-  if (!canRead) {
-    return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center">
-        <Link to="/" className="inline-flex items-center text-north-500 hover:text-north-800 mb-8 transition-colors">
-          <ArrowLeft size={20} className="mr-2" /> На главную
-        </Link>
-        <p className="text-north-700 text-lg">Эта публикация доступна только участникам сообщества («только для своих»).</p>
-        {community && (
-          <Link
-            to={`/community/${community.id}`}
-            className="inline-block mt-6 text-north-900 font-medium underline underline-offset-2"
-          >
-            Перейти в «{community.name}»
-          </Link>
-        )}
-        {!currentUser && (
-          <p className="mt-6 text-north-600">
-            <Link to="/login" state={{ from: id ? `/article/${id}` : '/' }} className="text-north-900 font-medium underline">
-              Войти в аккаунт
-            </Link>
-          </p>
-        )}
-      </div>
-    );
-  }
+	const canRead = true;
+	if (!canRead) {
+		return (
+			<div className="max-w-xl mx-auto px-4 py-16 text-center">
+				<Link
+					to="/"
+					className="inline-flex items-center text-north-500 hover:text-north-800 mb-8 transition-colors"
+				>
+					<ArrowLeft size={20} className="mr-2" /> На главную
+				</Link>
+				<p className="text-north-700 text-lg">
+					Эта публикация доступна только участникам сообщества («только для своих»).
+				</p>
+				{community && (
+					<Link
+						to={`/community/${community.id}`}
+						className="inline-block mt-6 text-north-900 font-medium underline underline-offset-2"
+					>
+						Перейти в «{community.name}»
+					</Link>
+				)}
+				{!currentUser && (
+					<p className="mt-6 text-north-600">
+						<Link
+							to="/login"
+							state={{ from: id ? `/article/${id}` : "/" }}
+							className="text-north-900 font-medium underline"
+						>
+							Войти в аккаунт
+						</Link>
+					</p>
+				)}
+			</div>
+		);
+	}
 
-  const isOwner = currentUser?.id === article.authorId;
-  const canEdit = isOwner;
-  const getCommentAuthor = (authorId: string) => users.find((u) => u.id === authorId);
+	const isOwner = currentUser?.id === article.authorId;
+	const canEdit = isOwner;
+	const getCommentAuthor = (authorId: string) => users.find((u) => u.id === authorId);
 
-  return (
-    <article className="max-w-3xl mx-auto px-4 py-12">
-      <Link to="/" className="inline-flex items-center text-north-500 hover:text-north-800 mb-8 transition-colors">
-        <ArrowLeft size={20} className="mr-2" /> Back to Feed
-      </Link>
+	return (
+		<article className="max-w-3xl mx-auto px-4 py-12">
+			<Link
+				to="/"
+				className="inline-flex items-center text-north-500 hover:text-north-800 mb-8 transition-colors"
+			>
+				<ArrowLeft size={20} className="mr-2" /> Back to Feed
+			</Link>
 
-      <div className="mb-8">
-        <h1 className="font-serif text-4xl md:text-5xl font-bold text-north-900 mb-4 leading-tight">{article.title}</h1>
-        <div className="flex flex-wrap gap-2 mb-6">
-          {(article.audience ?? 'public') === 'community_only' ? (
-            <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900">
-              Только для участников сообщества
-            </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-900">
-              Публичная публикация
-            </span>
-          )}
-        </div>
-        <div className="flex items-center justify-between border-b border-north-200 pb-6">
-          <Link to={`/profile/${author.id}`} className="flex items-center gap-3 group">
-            <img
-              src={author.avatarUrl}
-              alt={author.fullName}
-              className="w-12 h-12 rounded-full object-cover border-2 border-transparent group-hover:border-north-200 transition-all"
-            />
-            <div>
-              <p className="font-medium text-north-900 text-lg">{author.fullName}</p>
-              <p className="text-sm text-north-500">{new Date(article.createdAt).toLocaleDateString()}</p>
-            </div>
-          </Link>
-          {(canEdit || isOwner) && (
-            <div className="flex gap-2">
-              {canEdit && (
-                <Link to={`/edit/${article.id}`}>
-                  <Button variant="secondary" className="px-3">
-                    <Edit2 size={16} />
-                  </Button>
-                </Link>
-              )}
-              {isOwner && (
-                <Button variant="danger" className="px-3" onClick={handleDelete}>
-                  <Trash2 size={16} />
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+			<div className="mb-8">
+				<h1 className="font-serif text-4xl md:text-5xl font-bold text-north-900 mb-4 leading-tight">
+					{article.title}
+				</h1>
+				<div className="flex flex-wrap gap-2 mb-6">
+					{(article.audience ?? "public") === "community_only" ? (
+						<span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900">
+							Только для участников сообщества
+						</span>
+					) : (
+						<span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-900">
+							Публичная публикация
+						</span>
+					)}
+				</div>
+				<div className="flex items-center justify-between border-b border-north-200 pb-6">
+					<Link to={`/profile/${author.id}`} className="flex items-center gap-3 group">
+						<img
+							src={author.avatarUrl}
+							alt={author.fullName}
+							className="w-12 h-12 rounded-full object-cover border-2 border-transparent group-hover:border-north-200 transition-all"
+						/>
+						<div>
+							<p className="font-medium text-north-900 text-lg">{author.fullName}</p>
+							<p className="text-sm text-north-500">
+								{new Date(article.createdAt).toLocaleDateString()}
+							</p>
+						</div>
+					</Link>
+					{(canEdit || isOwner) && (
+						<div className="flex gap-2">
+							{canEdit && (
+								<Link to={`/edit/${article.id}`}>
+									<Button variant="secondary" className="px-3">
+										<Edit2 size={16} />
+									</Button>
+								</Link>
+							)}
+							{isOwner && (
+								<Button variant="danger" className="px-3" onClick={handleDelete}>
+									<Trash2 size={16} />
+								</Button>
+							)}
+						</div>
+					)}
+				</div>
+			</div>
 
-      <div className="mb-12 font-serif text-north-800 leading-relaxed text-lg">
-        {article.blocks ? (
-          <div className="space-y-6">
-            {article.blocks.map((block) => {
-              if (block.type === 'h1') return <h2 key={block.id} className="text-3xl font-bold text-north-900 mt-8 mb-4">{block.content}</h2>;
-              if (block.type === 'h2') return <h3 key={block.id} className="text-2xl font-bold text-north-900 mt-6 mb-3">{block.content}</h3>;
-              if (block.type === 'image') return <img key={block.id} src={block.content} alt="" className="w-full h-auto rounded-lg my-6" />;
-              return <p key={block.id} className="whitespace-pre-wrap">{block.content}</p>;
-            })}
-          </div>
-        ) : (
-          <div className="prose prose-lg prose-slate max-w-none">
-            {article.content.split('\n').map((line, i) => (
-              <p key={i} className="mb-4">
-                {line}
-              </p>
-            ))}
-          </div>
-        )}
-      </div>
+			<div className="mb-12 font-serif text-north-800 leading-relaxed text-lg">
+				{article.blocks ? (
+					<div className="space-y-6">
+						{article.blocks.map((block) => {
+							if (block.type === "h1")
+								return (
+									<h2 key={block.id} className="text-3xl font-bold text-north-900 mt-8 mb-4">
+										{block.content}
+									</h2>
+								);
+							if (block.type === "h2")
+								return (
+									<h3 key={block.id} className="text-2xl font-bold text-north-900 mt-6 mb-3">
+										{block.content}
+									</h3>
+								);
+							if (block.type === "image")
+								return (
+									<img
+										key={block.id}
+										src={block.content}
+										alt=""
+										className="w-full h-auto rounded-lg my-6"
+									/>
+								);
+							return (
+								<p key={block.id} className="whitespace-pre-wrap">
+									{block.content}
+								</p>
+							);
+						})}
+					</div>
+				) : (
+					<div className="prose prose-lg prose-slate max-w-none">
+						{article.content.split("\n").map((line, i) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: static list, order never changes
+							<p key={i} className="mb-4">
+								{line}
+							</p>
+						))}
+					</div>
+				)}
+			</div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-10 border-b border-north-200 pb-8">
-        {community && <CommunityPostBadge communityId={community.id} name={community.name} />}
-        {article.tags.map((tag) => (
-          <Tag key={tag}>{tag}</Tag>
-        ))}
-      </div>
+			<div className="flex flex-wrap items-center gap-2 mb-10 border-b border-north-200 pb-8">
+				{community && <CommunityPostBadge communityId={community.id} name={community.name} />}
+				{article.tags.map((tag) => (
+					<Tag key={tag}>{tag}</Tag>
+				))}
+			</div>
 
-      <div className="mb-10">
-        <p className="text-xs font-medium uppercase tracking-wide text-north-400 mb-2">Реакции</p>
-        <ArticleReactionsControl
-          article={article}
-          users={users}
-          currentUser={currentUser}
-          onUpdated={(a) => setArticle(a)}
-          richHover
-        />
-      </div>
+			<div className="mb-10">
+				<p className="text-xs font-medium uppercase tracking-wide text-north-400 mb-2">Реакции</p>
+				<ArticleReactionsControl
+					article={article}
+					users={users}
+					currentUser={currentUser}
+					onUpdated={(a) => setArticle(a)}
+					richHover
+				/>
+			</div>
 
-      <div className="space-y-8">
-        <h3 className="font-serif text-2xl font-bold text-north-900">Comments ({article.comments?.length || 0})</h3>
+			<div className="space-y-8">
+				<h3 className="font-serif text-2xl font-bold text-north-900">
+					Comments ({article.comments?.length || 0})
+				</h3>
 
-        {currentUser ? (
-          <div className="flex gap-4">
-            <img src={currentUser.avatarUrl} alt={currentUser.fullName} className="w-10 h-10 rounded-full object-cover shrink-0" />
-            <div className="flex-1">
-              <textarea
-                className="w-full p-4 rounded-xl border border-north-200 focus:outline-none focus:ring-2 focus:ring-north-400 min-h-[100px] resize-none"
-                placeholder="Add to the discussion..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-              />
-              <div className="flex justify-end mt-2">
-                <Button onClick={handlePostComment} disabled={!commentText.trim()}>
-                  Post Comment
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="text-north-500">
-            Чтобы оставлять комментарии и ставить лайки, пожалуйста, <Link to="/login" className="text-north-800 underline">войдите в аккаунт</Link>.
-          </p>
-        )}
+				{currentUser ? (
+					<div className="flex gap-4">
+						<img
+							src={currentUser.avatarUrl}
+							alt={currentUser.fullName}
+							className="w-10 h-10 rounded-full object-cover shrink-0"
+						/>
+						<div className="flex-1">
+							<textarea
+								className="w-full p-4 rounded-xl border border-north-200 focus:outline-none focus:ring-2 focus:ring-north-400 min-h-[100px] resize-none"
+								placeholder="Add to the discussion..."
+								value={commentText}
+								onChange={(e) => setCommentText(e.target.value)}
+							/>
+							<div className="flex justify-end mt-2">
+								<Button onClick={handlePostComment} disabled={!commentText.trim()}>
+									Post Comment
+								</Button>
+							</div>
+						</div>
+					</div>
+				) : (
+					<p className="text-north-500">
+						Чтобы оставлять комментарии и ставить лайки, пожалуйста,{" "}
+						<Link to="/login" className="text-north-800 underline">
+							войдите в аккаунт
+						</Link>
+						.
+					</p>
+				)}
 
-        <div className="space-y-6">
-          {article.comments?.map((comment) => {
-            const cAuthor = getCommentAuthor(comment.authorId);
-            return (
-              <div key={comment.id} className="flex gap-4">
-                {cAuthor ? (
-                  <Link to={`/profile/${cAuthor.id}`}>
-                    <img src={cAuthor.avatarUrl} alt={cAuthor.fullName} className="w-10 h-10 rounded-full object-cover shrink-0" />
-                  </Link>
-                ) : (
-                  <div className="w-10 h-10 bg-north-200 rounded-full shrink-0" />
-                )}
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-north-900">{cAuthor?.fullName || 'Unknown'}</span>
-                    <span className="text-xs text-north-400">{new Date(comment.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <p className="text-north-700">{comment.text}</p>
-                </div>
-              </div>
-            );
-          })}
-          {(!article.comments || article.comments.length === 0) && (
-            <p className="text-north-400 italic">No comments yet. Be the first to start the conversation.</p>
-          )}
-        </div>
-      </div>
-    </article>
-  );
+				<div className="space-y-6">
+					{article.comments?.map((comment) => {
+						const cAuthor = getCommentAuthor(comment.authorId);
+						return (
+							<div key={comment.id} className="flex gap-4">
+								{cAuthor ? (
+									<Link to={`/profile/${cAuthor.id}`}>
+										<img
+											src={cAuthor.avatarUrl}
+											alt={cAuthor.fullName}
+											className="w-10 h-10 rounded-full object-cover shrink-0"
+										/>
+									</Link>
+								) : (
+									<div className="w-10 h-10 bg-north-200 rounded-full shrink-0" />
+								)}
+								<div>
+									<div className="flex items-center gap-2 mb-1">
+										<span className="font-bold text-north-900">
+											{cAuthor?.fullName || "Unknown"}
+										</span>
+										<span className="text-xs text-north-400">
+											{new Date(comment.createdAt).toLocaleDateString()}
+										</span>
+									</div>
+									<p className="text-north-700">{comment.text}</p>
+								</div>
+							</div>
+						);
+					})}
+					{(!article.comments || article.comments.length === 0) && (
+						<p className="text-north-400 italic">
+							No comments yet. Be the first to start the conversation.
+						</p>
+					)}
+				</div>
+			</div>
+		</article>
+	);
 };
 
 export default ArticleView;
-

@@ -1,167 +1,164 @@
-import {
-  Article,
-  ArticleReaction,
-  Comment,
-  Community,
-  LeaderboardEntry,
-  RegisterInput,
-  User,
-} from '../types';
+import type {
+	Article,
+	ArticleReaction,
+	Comment,
+	Community,
+	LeaderboardEntry,
+	RegisterInput,
+	User,
+} from "../types";
 
-const BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
+const BASE = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem('token');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options?.headers as Record<string, string>),
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+	const token = localStorage.getItem("token");
+	const headers: Record<string, string> = {
+		"Content-Type": "application/json",
+		...(options?.headers as Record<string, string>),
+	};
+	if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${url}`, { ...options, headers });
-  const text = await res.text();
-  if (!res.ok) throw new Error(text || res.statusText);
-  if (!text) return undefined as unknown as T;
-  return JSON.parse(text);
+	const res = await fetch(`${BASE}${url}`, { ...options, headers });
+	const text = await res.text();
+	if (!res.ok) throw new Error(text || res.statusText);
+	if (!text) return undefined as unknown as T;
+	return JSON.parse(text);
 }
 
 export const api = {
-  // Auth
-  requestCode: (telegramHandle: string) =>
-    request<{ ok: boolean }>('/auth/request-code', {
-      method: 'POST',
-      body: JSON.stringify({ telegramHandle }),
-    }),
+	// Auth
+	requestCode: (telegramHandle: string) =>
+		request<{ ok: boolean }>("/auth/request-code", {
+			method: "POST",
+			body: JSON.stringify({ telegramHandle }),
+		}),
 
-  verifyCode: (telegramHandle: string, code: string) =>
-    request<{ user: User; token: string }>('/auth/verify-code', {
-      method: 'POST',
-      body: JSON.stringify({ telegramHandle, code }),
-    }),
+	verifyCode: (telegramHandle: string, code: string) =>
+		request<{ user: User; token: string }>("/auth/verify-code", {
+			method: "POST",
+			body: JSON.stringify({ telegramHandle, code }),
+		}),
 
-  register: (input: RegisterInput) =>
-    request<{ user: User; token: string }>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
+	register: (input: RegisterInput) =>
+		request<{ user: User; token: string }>("/auth/register", {
+			method: "POST",
+			body: JSON.stringify(input),
+		}),
 
-  getMe: () => request<User>('/auth/me'),
-  getSession: () => request<User | null>('/auth/me').catch(() => null),
-  clearSession: () => localStorage.removeItem('token'),
+	getMe: () => request<User>("/auth/me"),
+	getSession: () => request<User | null>("/auth/me").catch(() => null),
+	clearSession: () => localStorage.removeItem("token"),
 
-  // Users
-  getUsers: () => request<User[]>('/users'),
-  getUser: (id: string) => request<User>(`/users/${id}`),
-  updateProfile: (id: string, data: Partial<User>) =>
-    request<User>(`/users/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    }),
+	// Users
+	getUsers: () => request<User[]>("/users"),
+	getUser: (id: string) => request<User>(`/users/${id}`),
+	updateProfile: (id: string, data: Partial<User>) =>
+		request<User>(`/users/${id}`, {
+			method: "PATCH",
+			body: JSON.stringify(data),
+		}),
 
-  followUser: (id: string) =>
-    request<void>(`/users/${id}/follow`, { method: 'POST' }),
-  unfollowUser: (id: string) =>
-    request<void>(`/users/${id}/follow`, { method: 'DELETE' }),
-  getFollowing: (id: string) => request<User[]>(`/users/${id}/following`),
-  isFollowing: (id: string) =>
-    request<{ following: boolean }>(`/users/${id}/is-following`),
+	followUser: (id: string) => request<void>(`/users/${id}/follow`, { method: "POST" }),
+	unfollowUser: (id: string) => request<void>(`/users/${id}/follow`, { method: "DELETE" }),
+	getFollowing: (id: string) => request<User[]>(`/users/${id}/following`),
+	isFollowing: (id: string) => request<{ following: boolean }>(`/users/${id}/is-following`),
 
-  // Leaderboard
-  getLeaderboard: () => request<LeaderboardEntry[]>('/authors/leaderboard'),
+	// Leaderboard
+	getLeaderboard: () => request<LeaderboardEntry[]>("/authors/leaderboard"),
 
-  // Articles
-  getFeed: () => request<Article[]>('/feed'),
+	// Articles
+	getFeed: () => request<Article[]>("/feed"),
 
-  getArticleById: (id: string) => request<Article>(`/articles/${id}`),
+	getArticleById: (id: string) => request<Article>(`/articles/${id}`),
 
-  saveArticle: (article: Article) => {
-    const isNew = article.createdAt === undefined || article.id.startsWith('a');
-    if (isNew) {
-      return request<Article>('/articles', {
-        method: 'POST',
-        body: JSON.stringify(article),
-      });
-    }
-    return request<Article>(`/articles/${article.id}`, {
-      method: 'PUT',
-      body: JSON.stringify(article),
-    });
-  },
+	saveArticle: (article: Article) => {
+		const isNew = article.createdAt === undefined || article.id.startsWith("a");
+		if (isNew) {
+			return request<Article>("/articles", {
+				method: "POST",
+				body: JSON.stringify(article),
+			});
+		}
+		return request<Article>(`/articles/${article.id}`, {
+			method: "PUT",
+			body: JSON.stringify(article),
+		});
+	},
 
-  deleteArticle: (id: string) =>
-    request<void>(`/articles/${id}`, { method: 'DELETE' }),
+	deleteArticle: (id: string) => request<void>(`/articles/${id}`, { method: "DELETE" }),
 
-  addComment: (articleId: string, text: string) =>
-    request<Comment>(`/articles/${articleId}/comments`, {
-      method: 'POST',
-      body: JSON.stringify({ text }),
-    }),
+	addComment: (articleId: string, text: string) =>
+		request<Comment>(`/articles/${articleId}/comments`, {
+			method: "POST",
+			body: JSON.stringify({ text }),
+		}),
 
-  toggleReaction: (articleId: string, emoji: string) =>
-    request<ArticleReaction>(`/articles/${articleId}/reactions`, {
-      method: 'POST',
-      body: JSON.stringify({ emoji }),
-    }),
+	toggleReaction: (articleId: string, emoji: string) =>
+		request<ArticleReaction>(`/articles/${articleId}/reactions`, {
+			method: "POST",
+			body: JSON.stringify({ emoji }),
+		}),
 
-  getCommunities: () => request<Community[]>('/communities'),
+	getCommunities: () => request<Community[]>("/communities"),
 
-  getCommunityById: (id: string) => request<Community>(`/communities/${id}`),
+	getCommunityById: (id: string) => request<Community>(`/communities/${id}`),
 
-  createCommunity: (data: { name: string; description: string; aboutShort?: string }) =>
-    request<Community>('/communities', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+	createCommunity: (data: { name: string; description: string; aboutShort?: string }) =>
+		request<Community>("/communities", {
+			method: "POST",
+			body: JSON.stringify(data),
+		}),
 
-  getCommunityMembers: (id: string) => request<User[]>(`/communities/${id}/members`),
+	getCommunityMembers: (id: string) => request<User[]>(`/communities/${id}/members`),
 
-  joinCommunity: (id: string) =>
-    request<{ ok: boolean; error?: string }>(`/communities/${id}/join`, {
-      method: 'POST',
-    }),
+	joinCommunity: (id: string) =>
+		request<{ ok: boolean; error?: string }>(`/communities/${id}/join`, {
+			method: "POST",
+		}),
 
-  leaveCommunity: (id: string) =>
-    request<{ ok: boolean }>(`/communities/${id}/leave`, { method: 'POST' }),
+	leaveCommunity: (id: string) =>
+		request<{ ok: boolean }>(`/communities/${id}/leave`, { method: "POST" }),
 
-  promoteMember: (communityId: string, userId: string) =>
-    request<{ ok: boolean }>(`/communities/${communityId}/promote`, {
-      method: 'POST',
-      body: JSON.stringify({ targetUserId: userId }),
-    }),
+	promoteMember: (communityId: string, userId: string) =>
+		request<{ ok: boolean }>(`/communities/${communityId}/promote`, {
+			method: "POST",
+			body: JSON.stringify({ targetUserId: userId }),
+		}),
 
-  blockUser: (communityId: string, userId: string) =>
-    request<{ ok: boolean }>(`/communities/${communityId}/block`, {
-      method: 'POST',
-      body: JSON.stringify({ targetUserId: userId }),
-    }),
+	blockUser: (communityId: string, userId: string) =>
+		request<{ ok: boolean }>(`/communities/${communityId}/block`, {
+			method: "POST",
+			body: JSON.stringify({ targetUserId: userId }),
+		}),
 
-  getCommunitiesForMember: (userId: string) =>
-    request<Community[]>(`/communities/my`),
+	getCommunitiesForMember: (_userId: string) => request<Community[]>(`/communities/my`),
 
-  getCommunityArticles: (communityId: string) =>
-    request<Article[]>(`/communities/${communityId}/articles`),
+	getCommunityArticles: (communityId: string) =>
+		request<Article[]>(`/communities/${communityId}/articles`),
 
-  getUserArticles: (userId: string) =>
-    request<Article[]>(`/users/${userId}/articles`),
+	getUserArticles: (userId: string) => request<Article[]>(`/users/${userId}/articles`),
 
-  // Aliases (legacy callers)
-  getAuthorsLeaderboard: () => api.getLeaderboard(),
-  getCommunitiesByMemberCount: () => api.getCommunities(),
-  getUserById: (id: string) => api.getUser(id),
-  getArticlesForProfile: (userId: string) => api.getUserArticles(userId),
-  isFollowingUser: (currentUserId: string, targetId: string) => api.isFollowing(targetId),
-  saveUser: (data: Partial<User>) => api.updateProfile(data.id!, data),
-  verifyAuthCode: async (telegramHandle: string, code: string) => {
-    const res = await api.verifyCode(telegramHandle, code);
-    if (res) localStorage.setItem('token', res.token);
-    return res?.user ?? null;
-  },
-  getArticlesByCommunityId: (communityId: string) => api.getCommunityArticles(communityId),
-  promoteCommunityAdmin: (communityId: string, _currentUserId: string, targetId: string) =>
-    api.promoteMember(communityId, targetId),
-  blockUserFromCommunity: (communityId: string, _currentUserId: string, targetId: string) =>
-    api.blockUser(communityId, targetId),
-  getArticles: () => api.getFeed(),
-  toggleArticleReaction: (articleId: string, _currentUserId: string, emoji: string) =>
-    api.toggleReaction(articleId, emoji),
+	// Aliases (legacy callers)
+	getAuthorsLeaderboard: () => api.getLeaderboard(),
+	getCommunitiesByMemberCount: () => api.getCommunities(),
+	getUserById: (id: string) => api.getUser(id),
+	getArticlesForProfile: (userId: string) => api.getUserArticles(userId),
+	isFollowingUser: (_currentUserId: string, targetId: string) => api.isFollowing(targetId),
+	saveUser: (data: Partial<User>) => {
+		if (!data.id) throw new Error("User ID is required");
+		return api.updateProfile(data.id, data);
+	},
+	verifyAuthCode: async (telegramHandle: string, code: string) => {
+		const res = await api.verifyCode(telegramHandle, code);
+		if (res) localStorage.setItem("token", res.token);
+		return res?.user ?? null;
+	},
+	getArticlesByCommunityId: (communityId: string) => api.getCommunityArticles(communityId),
+	promoteCommunityAdmin: (communityId: string, _currentUserId: string, targetId: string) =>
+		api.promoteMember(communityId, targetId),
+	blockUserFromCommunity: (communityId: string, _currentUserId: string, targetId: string) =>
+		api.blockUser(communityId, targetId),
+	getArticles: () => api.getFeed(),
+	toggleArticleReaction: (articleId: string, _currentUserId: string, emoji: string) =>
+		api.toggleReaction(articleId, emoji),
 };
