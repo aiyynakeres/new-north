@@ -24,7 +24,6 @@ func main() {
 	userH := &handlers.UserHandler{Store: st}
 	articleH := &handlers.ArticleHandler{Store: st}
 	communityH := &handlers.CommunityHandler{Store: st}
-	aiH := &handlers.AIHandler{}
 
 	// Build token map from sessions
 	authMiddleware := middleware.Auth(st.LookupToken)
@@ -33,8 +32,13 @@ func main() {
 	r := chi.NewRouter()
 
 	// CORS
+	frontendURL := os.Getenv("FRONTEND_URL")
+	allowedOrigins := []string{"http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173"}
+	if frontendURL != "" {
+		allowedOrigins = append(allowedOrigins, frontendURL)
+	}
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,
@@ -81,10 +85,6 @@ func main() {
 	r.With(authMiddleware).Post("/api/communities/{id}/promote", communityH.Promote)
 	r.With(authMiddleware).Post("/api/communities/{id}/block", communityH.Block)
 	r.With(authMiddleware).Get("/api/communities/my", communityH.MyCommunities)
-
-	// AI routes
-	r.Post("/api/ai/generate-tags", aiH.GenerateTags)
-	r.Post("/api/ai/enhance-text", aiH.EnhanceText)
 
 	// Health check
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
