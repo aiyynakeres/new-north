@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Community, User as UserType } from '../types';
-import { db } from '../services/mockDb';
+import { api } from '../services/api';
 
 const CommunityMembers: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -11,8 +11,11 @@ const CommunityMembers: React.FC = () => {
 
   useEffect(() => {
     if (!id) return;
-    setCommunity(db.getCommunityById(id) ?? null);
-    setUsers(db.getUsers());
+    (async () => {
+      const [c, users] = await Promise.all([api.getCommunityById(id), api.getUsers()]);
+      setCommunity(c ?? null);
+      setUsers(users);
+    })();
   }, [id]);
 
   if (!id || !community) {

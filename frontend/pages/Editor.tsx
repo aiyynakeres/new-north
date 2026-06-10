@@ -11,8 +11,7 @@ import {
   Community,
   User as UserType,
 } from '../types';
-import { db } from '../services/mockDb';
-import { generateTags } from '../services/geminiService';
+import { api } from '../services/api';
 
 type Props = {
   currentUser: UserType;
@@ -31,13 +30,17 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
   const [audience, setAudience] = useState<ArticleAudience>('public');
 
   useEffect(() => {
-    setMyCommunities(db.getCommunitiesForMember(currentUser.id));
+    (async () => {
+      const comms = await api.getCommunitiesForMember(currentUser.id);
+      setMyCommunities(comms);
+    })();
   }, [currentUser.id]);
 
   useEffect(() => {
-    if (id) {
-      const existing = db.getArticleById(id);
-      if (existing && db.canEditArticle(currentUser.id, existing)) {
+    if (!id) return;
+    (async () => {
+      const existing = await api.getArticleById(id);
+      if (existing) {
         setTitle(existing.title);
         setTags(existing.tags);
         setCommunityId(existing.communityId || '');
@@ -56,7 +59,7 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
       } else {
         navigate('/');
       }
-    }
+    })();
   }, [id, currentUser.id, navigate]);
 
   useEffect(() => {
@@ -67,25 +70,27 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
     if (id) return;
     const fromUrl = searchParams.get('community');
     if (!fromUrl) return;
-    const c = db.getCommunityById(fromUrl);
-    if (c?.memberIds.includes(currentUser.id)) {
-      setCommunityId(fromUrl);
-    }
+    (async () => {
+      const c = await api.getCommunityById(fromUrl);
+      if (c?.memberIds.includes(currentUser.id)) {
+        setCommunityId(fromUrl);
+      }
+    })();
   }, [id, searchParams, currentUser.id]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) {
       alert('Title is required');
       return;
     }
 
-    const existing = id ? db.getArticleById(id) : undefined;
+    const existing = id ? await api.getArticleById(id) : undefined;
     let resolvedCommunityId = communityId || undefined;
     if (existing && existing.authorId !== currentUser.id) {
       resolvedCommunityId = existing.communityId;
     }
     if (resolvedCommunityId) {
-      const c = db.getCommunityById(resolvedCommunityId);
+      const c = await api.getCommunityById(resolvedCommunityId);
       if (!c?.memberIds.includes(currentUser.id)) {
         alert('Вы не состоите в выбранном сообществе');
         return;
@@ -112,23 +117,32 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
       content: 'See blocks',
       blocks: blocks,
       tags,
-      createdAt: id ? db.getArticleById(id)?.createdAt || new Date().toISOString() : new Date().toISOString(),
+      createdAt: existing?.createdAt || new Date().toISOString(),
       updatedAt: id ? new Date().toISOString() : undefined,
-      views: id ? db.getArticleById(id)?.views || 0 : 0,
-      commentsCount: id ? db.getArticleById(id)?.commentsCount || 0 : 0,
-      comments: id ? db.getArticleById(id)?.comments || [] : [],
-      reactions: id ? db.getArticleById(id)?.reactions ?? [] : [],
+      views: existing?.views || 0,
+      commentsCount: existing?.commentsCount || 0,
+      comments: existing?.comments || [],
+      reactions: existing?.reactions ?? [],
     };
 
-    db.saveArticle(article);
+    await api.saveArticle(article);
     navigate('/');
   };
 
   const handleAutoTag = async () => {
     setLoadingAI(true);
     const fullText = blocks.map((b) => b.content).join('\n');
-    const newTags = await generateTags(fullText);
-    setTags(newTags);
+    try {
+      const res = await fetch('/api/ai/generate-tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: fullText }),
+      });
+      const newTags = await res.json();
+      setTags(newTags);
+    } catch {
+      setTags(['general', 'life']);
+    }
     setLoadingAI(false);
   };
 
@@ -155,17 +169,25 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
     setBlocks(newBlocks);
   };
 
-  const existingArticle = id ? db.getArticleById(id) : undefined;
+  const [existingArticle, setExistingArticle] = useState<ArticleType | undefined>(undefined);
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      const a = await api.getArticleById(id);
+      setExistingArticle(a);
+      if (a?.communityId) {
+        const c = await api.getCommunityById(a.communityId);
+        if (c && !myCommunities.some(x => x.id === c.id)) {
+          setMyCommunities(prev => [...prev, c]);
+        }
+      }
+    })();
+  }, [id]);
   const canPickCommunity = !existingArticle || existingArticle.authorId === currentUser.id;
 
   const communityOptions = useMemo(() => {
-    const list = [...myCommunities];
-    if (communityId && !list.some((c) => c.id === communityId)) {
-      const c = db.getCommunityById(communityId);
-      if (c) list.unshift(c);
-    }
-    return list;
-  }, [myCommunities, communityId]);
+    return myCommunities;
+  }, [myCommunities]);
 
   const handleImageUpload = (blockId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -214,7 +236,7 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
             <p className="text-sm text-north-600">
               Сообщество:{' '}
               <Link to={`/community/${existingArticle.communityId}`} className="text-north-800 underline">
-                {db.getCommunityById(existingArticle.communityId)?.name}
+                {myCommunities.find(c => c.id === existingArticle.communityId)?.name || existingArticle.communityId}
               </Link>{' '}
               (только автор может перенести пост в другое сообщество)
             </p>

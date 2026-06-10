@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { X, Users } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { Community, User as UserType } from '../types';
-import { db } from '../services/mockDb';
+import { api } from '../services/api';
 
 type Props = {
   currentUser: UserType | null;
@@ -17,12 +17,12 @@ const Communities: React.FC<Props> = ({ currentUser }) => {
   const [aboutShort, setAboutShort] = useState('');
   const [description, setDescription] = useState('');
 
-  const refresh = () => {
-    setList(db.getCommunitiesByMemberCount());
+  const refresh = async () => {
+    setList(await api.getCommunitiesByMemberCount());
   };
 
   useEffect(() => {
-    refresh();
+    (async () => setList(await api.getCommunitiesByMemberCount()))();
   }, []);
 
   const openCreate = () => {
@@ -40,14 +40,14 @@ const Communities: React.FC<Props> = ({ currentUser }) => {
     setDescription('');
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!currentUser) return;
     const n = name.trim();
     const short = aboutShort.trim();
     const desc = description.trim();
     if (!n || !short || !desc) return;
-    const created = db.createCommunity({ name: n, aboutShort: short, description: desc }, currentUser);
-    refresh();
+    const created = await api.createCommunity({ name: n, aboutShort: short, description: desc }, currentUser);
+    await refresh();
     closeCreate();
     navigate(`/community/${created.id}`);
   };
