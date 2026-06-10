@@ -151,7 +151,11 @@ export const api = {
   getArticlesForProfile: (userId: string) => api.getUserArticles(userId),
   isFollowingUser: (currentUserId: string, targetId: string) => api.isFollowing(targetId),
   saveUser: (data: Partial<User>) => api.updateProfile(data.id!, data),
-  verifyAuthCode: (telegramHandle: string, code: string) => api.verifyCode(telegramHandle, code),
+  verifyAuthCode: async (telegramHandle: string, code: string) => {
+    const res = await api.verifyCode(telegramHandle, code);
+    if (res) localStorage.setItem('token', res.token);
+    return res?.user ?? null;
+  },
   getArticlesByCommunityId: (communityId: string) => api.getCommunityArticles(communityId),
   promoteCommunityAdmin: (communityId: string, _currentUserId: string, targetId: string) =>
     api.promoteMember(communityId, targetId),

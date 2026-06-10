@@ -116,12 +116,13 @@ const Register: React.FC<Props> = ({ onLogin }) => {
 
     setError('');
     try {
-      const res = await api.register(
-        formData.telegramHandle.trim(),
-        formData.fullName.trim(),
-        formData.bio.trim(),
-        formData.tags,
-      );
+      const res = await api.register({
+        telegramHandle: formData.telegramHandle.trim(),
+        fullName: formData.fullName.trim(),
+        bio: formData.bio.trim(),
+        tags: formData.tags,
+      });
+      if (res) localStorage.setItem('token', res.token);
       onLogin(res.user);
       navigate('/');
     } catch (e: any) {
