@@ -1,319 +1,361 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Camera, Upload } from 'lucide-react';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
-import Tag from '../components/ui/Tag';
-import { User as UserType } from '../types';
-import { api } from '../services/api';
+import { Camera, Upload } from "lucide-react";
+import type React from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import Tag from "../components/ui/Tag";
+import { api } from "../services/api";
+import type { User as UserType } from "../types";
 
 type Props = {
-  onLogin: (u: UserType) => void;
+	onLogin: (u: UserType) => void;
 };
 
-type FormField = 'telegramHandle' | 'authCode' | 'fullName' | 'bio';
+type FormField = "telegramHandle" | "authCode" | "fullName" | "bio";
 
 const Register: React.FC<Props> = ({ onLogin }) => {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [formData, setFormData] = useState({
-    telegramHandle: '',
-    fullName: '',
-    avatarUrl: '',
-    bio: '',
-    tags: [] as string[],
-  });
-  const [authCode, setAuthCode] = useState('');
-  const [tagInput, setTagInput] = useState('');
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [touched, setTouched] = useState<Record<FormField, boolean>>({
-    telegramHandle: false,
-    authCode: false,
-    fullName: false,
-    bio: false,
-  });
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+	const [step, setStep] = useState<1 | 2 | 3>(1);
+	const [formData, setFormData] = useState({
+		telegramHandle: "",
+		fullName: "",
+		avatarUrl: "",
+		bio: "",
+		tags: [] as string[],
+	});
+	const [authCode, setAuthCode] = useState("");
+	const [tagInput, setTagInput] = useState("");
+	const [isDragOver, setIsDragOver] = useState(false);
+	const [touched, setTouched] = useState<Record<FormField, boolean>>({
+		telegramHandle: false,
+		authCode: false,
+		fullName: false,
+		bio: false,
+	});
+	const [error, setError] = useState("");
+	const navigate = useNavigate();
 
-  const fieldErrors = useMemo(() => {
-    const errors: Partial<Record<FormField, string>> = {};
-    const telegram = formData.telegramHandle.trim();
-    const normalizedAuthCode = authCode.trim();
-    const fullName = formData.fullName.trim();
-    const bioLength = formData.bio.trim().length;
+	const fieldErrors = useMemo(() => {
+		const errors: Partial<Record<FormField, string>> = {};
+		const telegram = formData.telegramHandle.trim();
+		const normalizedAuthCode = authCode.trim();
+		const fullName = formData.fullName.trim();
+		const bioLength = formData.bio.trim().length;
 
-    if (!telegram) {
-      errors.telegramHandle = 'Telegram обязателен';
-    }
-    if (!normalizedAuthCode) {
-      errors.authCode = 'Код обязателен';
-    } else if (!/^\d{6}$/.test(normalizedAuthCode)) {
-      errors.authCode = 'Код должен состоять из 6 цифр';
-    }
-    if (!fullName) {
-      errors.fullName = 'Имя и фамилия обязательны';
-    }
-    if (bioLength === 0) {
-      errors.bio = 'Расскажи о себе';
-    } else if (bioLength < 100) {
-      errors.bio = 'Минимум 100 символов';
-    }
+		if (!telegram) {
+			errors.telegramHandle = "Telegram обязателен";
+		}
+		if (!normalizedAuthCode) {
+			errors.authCode = "Код обязателен";
+		} else if (!/^\d{6}$/.test(normalizedAuthCode)) {
+			errors.authCode = "Код должен состоять из 6 цифр";
+		}
+		if (!fullName) {
+			errors.fullName = "Имя и фамилия обязательны";
+		}
+		if (bioLength === 0) {
+			errors.bio = "Расскажи о себе";
+		} else if (bioLength < 100) {
+			errors.bio = "Минимум 100 символов";
+		}
 
-    return errors;
-  }, [authCode, formData]);
+		return errors;
+	}, [authCode, formData]);
 
-  const isValid = useMemo(() => {
-    if (step === 1) {
-      return !fieldErrors.telegramHandle;
-    }
-    if (step === 2) {
-      return !fieldErrors.authCode;
-    }
+	const isValid = useMemo(() => {
+		if (step === 1) {
+			return !fieldErrors.telegramHandle;
+		}
+		if (step === 2) {
+			return !fieldErrors.authCode;
+		}
 
-    return !fieldErrors.fullName && !fieldErrors.bio;
-  }, [fieldErrors, step]);
+		return !fieldErrors.fullName && !fieldErrors.bio;
+	}, [fieldErrors, step]);
 
-  const touchField = (field: FormField) => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
-  };
+	const touchField = (field: FormField) => {
+		setTouched((prev) => ({ ...prev, [field]: true }));
+	};
 
-  const touchFieldsForStep = (currentStep: 1 | 2 | 3) => {
-    if (currentStep === 1) {
-      setTouched((prev) => ({ ...prev, telegramHandle: true }));
-      return;
-    }
-    if (currentStep === 2) {
-      setTouched((prev) => ({ ...prev, authCode: true }));
-      return;
-    }
-    setTouched((prev) => ({ ...prev, fullName: true, bio: true }));
-  };
+	const touchFieldsForStep = (currentStep: 1 | 2 | 3) => {
+		if (currentStep === 1) {
+			setTouched((prev) => ({ ...prev, telegramHandle: true }));
+			return;
+		}
+		if (currentStep === 2) {
+			setTouched((prev) => ({ ...prev, authCode: true }));
+			return;
+		}
+		setTouched((prev) => ({ ...prev, fullName: true, bio: true }));
+	};
 
-  const handleRequestCode = () => {
-    if (!isValid) {
-      touchFieldsForStep(1);
-      return;
-    }
+	const handleRequestCode = () => {
+		if (!isValid) {
+			touchFieldsForStep(1);
+			return;
+		}
 
-    setError('');
-    setStep(2);
-  };
+		setError("");
+		setStep(2);
+	};
 
-  const handleVerifyCode = () => {
-    if (!isValid) {
-      touchFieldsForStep(2);
-      return;
-    }
+	const handleVerifyCode = () => {
+		if (!isValid) {
+			touchFieldsForStep(2);
+			return;
+		}
 
-    setError('');
-    setStep(3);
-  };
+		setError("");
+		setStep(3);
+	};
 
-  const handleRegister = async () => {
-    if (!isValid) {
-      touchFieldsForStep(3);
-      return;
-    }
+	const handleRegister = async () => {
+		if (!isValid) {
+			touchFieldsForStep(3);
+			return;
+		}
 
-    setError('');
-    try {
-      const res = await api.register({
-        telegramHandle: formData.telegramHandle.trim(),
-        fullName: formData.fullName.trim(),
-        bio: formData.bio.trim(),
-        tags: formData.tags,
-      });
-      if (res) localStorage.setItem('token', res.token);
-      onLogin(res.user);
-      navigate('/');
-    } catch (e: any) {
-      setError(e.message || 'Ошибка регистрации');
-    }
-  };
+		setError("");
+		try {
+			const res = await api.register({
+				telegramHandle: formData.telegramHandle.trim(),
+				fullName: formData.fullName.trim(),
+				bio: formData.bio.trim(),
+				tags: formData.tags,
+			});
+			if (res) localStorage.setItem("token", res.token);
+			onLogin(res.user);
+			navigate("/");
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Ошибка регистрации");
+		}
+	};
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setFormData((prev) => ({ ...prev, avatarUrl: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
+	const handleDrop = useCallback((e: React.DragEvent) => {
+		e.preventDefault();
+		setIsDragOver(false);
+		const file = e.dataTransfer.files[0];
+		if (file?.type.startsWith("image/")) {
+			const reader = new FileReader();
+			reader.onload = () => {
+				setFormData((prev) => ({ ...prev, avatarUrl: reader.result as string }));
+			};
+			reader.readAsDataURL(file);
+		}
+	}, []);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setFormData((prev) => ({ ...prev, avatarUrl: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (file) {
+			const reader = new FileReader();
+			reader.onload = () => {
+				setFormData((prev) => ({ ...prev, avatarUrl: reader.result as string }));
+			};
+			reader.readAsDataURL(file);
+		}
+	};
 
-  const addTag = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      if (!formData.tags.includes(tagInput.trim())) {
-        setFormData((prev) => ({ ...prev, tags: [...prev.tags, tagInput.trim()] }));
-      }
-      setTagInput('');
-    }
-  };
+	const addTag = (e: React.KeyboardEvent) => {
+		if (e.key === "Enter" && tagInput.trim()) {
+			e.preventDefault();
+			if (!formData.tags.includes(tagInput.trim())) {
+				setFormData((prev) => ({ ...prev, tags: [...prev.tags, tagInput.trim()] }));
+			}
+			setTagInput("");
+		}
+	};
 
-  const removeTag = (tagToRemove: string) => {
-    setFormData((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tagToRemove) }));
-  };
+	const removeTag = (tagToRemove: string) => {
+		setFormData((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tagToRemove) }));
+	};
 
-  return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-north-100 p-8">
-        <div className="mb-8 text-center">
-          <h2 className="font-serif text-3xl font-bold text-north-900 mb-2">
-            {step === 1 ? 'Вступить в клуб' : step === 2 ? 'Подтвердить Telegram' : 'Завершить профиль'}
-          </h2>
-          <p className="text-north-500">Шаг {step} из 3</p>
-        </div>
-        {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>}
+	return (
+		<div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12">
+			<div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-north-100 p-8">
+				<div className="mb-8 text-center">
+					<h2 className="font-serif text-3xl font-bold text-north-900 mb-2">
+						{step === 1
+							? "Вступить в клуб"
+							: step === 2
+								? "Подтвердить Telegram"
+								: "Завершить профиль"}
+					</h2>
+					<p className="text-north-500">Шаг {step} из 3</p>
+				</div>
+				{error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>}
 
-        {step === 1 ? (
-          <div className="space-y-4">
-            <Input
-              label="Telegram"
-              placeholder="username"
-              required
-              error={touched.telegramHandle ? fieldErrors.telegramHandle : undefined}
-              onBlur={() => touchField('telegramHandle')}
-              value={formData.telegramHandle}
-              onChange={(e: any) => setFormData({ ...formData, telegramHandle: e.target.value })}
-            />
-            <Button className="w-full mt-6" onClick={handleRequestCode} disabled={!isValid}>
-              Получить код
-            </Button>
-          </div>
-        ) : step === 2 ? (
-          <div className="space-y-4">
-            <Input
-              label="Код авторизации"
-              required
-              placeholder="123456"
-              inputMode="numeric"
-              maxLength={6}
-              error={touched.authCode ? fieldErrors.authCode : undefined}
-              onBlur={() => touchField('authCode')}
-              value={authCode}
-              onChange={(e: any) => setAuthCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            />
-            <p className="text-xs text-north-500 -mt-2">Тестовый код: 123456</p>
-            <Button className="w-full mt-6" onClick={handleVerifyCode} disabled={!isValid}>
-              Подтвердить код
-            </Button>
-            <button
-              onClick={() => {
-                setStep(1);
-                setAuthCode('');
-                setTouched((prev) => ({ ...prev, authCode: false }));
-                setError('');
-              }}
-              className="w-full text-center text-sm text-north-500 mt-2 hover:underline"
-            >
-              Назад
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="flex justify-center">
-              <div
-                className={`relative w-32 h-32 rounded-full border-2 ${
-                  isDragOver ? 'border-north-800 bg-north-50' : 'border-dashed border-north-300'
-                } flex items-center justify-center overflow-hidden cursor-pointer transition-colors group`}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(true);
-                }}
-                onDragLeave={() => setIsDragOver(false)}
-                onDrop={handleDrop}
-                onClick={() => document.getElementById('avatar-upload')?.click()}
-              >
-                {formData.avatarUrl ? (
-                  <img src={formData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="text-center p-2">
-                    <Upload className="w-8 h-8 text-north-400 mx-auto mb-1 group-hover:text-north-600" />
-                    <span className="text-[10px] text-north-400 font-medium">Добавить фото</span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Camera className="text-white" size={24} />
-                </div>
-                <input type="file" id="avatar-upload" hidden accept="image/*" onChange={handleFileSelect} />
-              </div>
-            </div>
+				{step === 1 ? (
+					<div className="space-y-4">
+						<Input
+							label="Telegram"
+							placeholder="username"
+							required
+							error={touched.telegramHandle ? fieldErrors.telegramHandle : undefined}
+							onBlur={() => touchField("telegramHandle")}
+							value={formData.telegramHandle}
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+								setFormData({ ...formData, telegramHandle: e.target.value })
+							}
+						/>
+						<Button className="w-full mt-6" onClick={handleRequestCode} disabled={!isValid}>
+							Получить код
+						</Button>
+					</div>
+				) : step === 2 ? (
+					<div className="space-y-4">
+						<Input
+							label="Код авторизации"
+							required
+							placeholder="123456"
+							inputMode="numeric"
+							maxLength={6}
+							error={touched.authCode ? fieldErrors.authCode : undefined}
+							onBlur={() => touchField("authCode")}
+							value={authCode}
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+								setAuthCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+							}
+						/>
+						<p className="text-xs text-north-500 -mt-2">Тестовый код: 123456</p>
+						<Button className="w-full mt-6" onClick={handleVerifyCode} disabled={!isValid}>
+							Подтвердить код
+						</Button>
+						<button
+							type="button"
+							onClick={() => {
+								setStep(1);
+								setAuthCode("");
+								setTouched((prev) => ({ ...prev, authCode: false }));
+								setError("");
+							}}
+							className="w-full text-center text-sm text-north-500 mt-2 hover:underline"
+						>
+							Назад
+						</button>
+					</div>
+				) : (
+					<div className="space-y-6">
+						<div className="flex justify-center">
+							<button
+								type="button"
+								className={`relative w-32 h-32 rounded-full border-2 ${
+									isDragOver ? "border-north-800 bg-north-50" : "border-dashed border-north-300"
+								} flex items-center justify-center overflow-hidden cursor-pointer transition-colors group`}
+								onDragOver={(e) => {
+									e.preventDefault();
+									setIsDragOver(true);
+								}}
+								onDragLeave={() => setIsDragOver(false)}
+								onDrop={handleDrop}
+								onClick={() => document.getElementById("avatar-upload")?.click()}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										document.getElementById("avatar-upload")?.click();
+									}
+								}}
+							>
+								{formData.avatarUrl ? (
+									<img
+										src={formData.avatarUrl}
+										alt="Avatar"
+										className="w-full h-full object-cover"
+									/>
+								) : (
+									<div className="text-center p-2">
+										<Upload className="w-8 h-8 text-north-400 mx-auto mb-1 group-hover:text-north-600" />
+										<span className="text-[10px] text-north-400 font-medium">Добавить фото</span>
+									</div>
+								)}
+								<div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+									<Camera className="text-white" size={24} />
+								</div>
+								<input
+									type="file"
+									id="avatar-upload"
+									hidden
+									accept="image/*"
+									onChange={handleFileSelect}
+								/>
+							</button>
+						</div>
 
-            <Input
-              label="Имя и фамилия"
-              placeholder="Петр Петров"
-              error={touched.fullName ? fieldErrors.fullName : undefined}
-              onBlur={() => touchField('fullName')}
-              value={formData.fullName}
-              onChange={(e: any) => setFormData({ ...formData, fullName: e.target.value })}
-            />
+						<Input
+							label="Имя и фамилия"
+							placeholder="Петр Петров"
+							error={touched.fullName ? fieldErrors.fullName : undefined}
+							onBlur={() => touchField("fullName")}
+							value={formData.fullName}
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+								setFormData({ ...formData, fullName: e.target.value })
+							}
+						/>
 
-            <div className="w-full">
-              <label className="block text-sm font-medium text-north-600 mb-1">Обо мне</label>
-              <textarea
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  touched.bio && fieldErrors.bio
-                    ? 'border-red-300 focus:ring-red-200'
-                    : 'border-north-200 focus:ring-north-400'
-                } focus:outline-none focus:ring-2 bg-white transition-all text-north-800 placeholder-north-300 min-h-[120px]`}
-                placeholder="Tell us about your experience, interests, and what drives you..."
-                value={formData.bio}
-                onBlur={() => touchField('bio')}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              />
-              <div
-                className={`text-xs text-right mt-1 ${touched.bio && fieldErrors.bio ? 'text-red-500' : 'text-north-400'}`}
-              >
-                {formData.bio.length} / 100 символов минимум
-              </div>
-              {touched.bio && fieldErrors.bio && <p className="text-red-500 text-xs mt-1">{fieldErrors.bio}</p>}
-            </div>
+						<div className="w-full">
+							<label htmlFor="bio" className="block text-sm font-medium text-north-600 mb-1">
+								Обо мне
+							</label>
+							<textarea
+								id="bio"
+								className={`w-full px-4 py-3 rounded-lg border ${
+									touched.bio && fieldErrors.bio
+										? "border-red-300 focus:ring-red-200"
+										: "border-north-200 focus:ring-north-400"
+								} focus:outline-none focus:ring-2 bg-white transition-all text-north-800 placeholder-north-300 min-h-[120px]`}
+								placeholder="Tell us about your experience, interests, and what drives you..."
+								value={formData.bio}
+								onBlur={() => touchField("bio")}
+								onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+							/>
+							<div
+								className={`text-xs text-right mt-1 ${touched.bio && fieldErrors.bio ? "text-red-500" : "text-north-400"}`}
+							>
+								{formData.bio.length} / 100 символов минимум
+							</div>
+							{touched.bio && fieldErrors.bio && (
+								<p className="text-red-500 text-xs mt-1">{fieldErrors.bio}</p>
+							)}
+						</div>
 
-            <div className="w-full">
-              <label className="block text-sm font-medium text-north-600 mb-1">Интересы</label>
-              <div className="flex flex-wrap gap-2 mb-2 min-h-[30px]">
-                {formData.tags.map((tag) => (
-                  <Tag key={tag} onRemove={() => removeTag(tag)}>
-                    {tag}
-                  </Tag>
-                ))}
-                {formData.tags.length === 0 && <span className="text-sm text-north-400 italic">Еще не добавлен ни один тэг</span>}
-              </div>
-              <input
-                className="w-full px-4 py-2 rounded-lg border border-north-200 focus:outline-none focus:ring-2 focus:ring-north-400 focus:border-transparent bg-white transition-all text-north-800 placeholder-north-300"
-                placeholder="Напиши интереc"
-                value={tagInput}
-                onKeyDown={addTag}
-                onChange={(e) => setTagInput(e.target.value)}
-              />
-              <p className="text-xs text-north-400 mt-1">Нажми на Enter для добавления тэга</p>
-            </div>
+						<div className="w-full">
+							<label htmlFor="interests" className="block text-sm font-medium text-north-600 mb-1">
+								Интересы
+							</label>
+							<div className="flex flex-wrap gap-2 mb-2 min-h-[30px]">
+								{formData.tags.map((tag) => (
+									<Tag key={tag} onRemove={() => removeTag(tag)}>
+										{tag}
+									</Tag>
+								))}
+								{formData.tags.length === 0 && (
+									<span className="text-sm text-north-400 italic">Еще не добавлен ни один тэг</span>
+								)}
+							</div>
+							<input
+								id="interests"
+								className="w-full px-4 py-2 rounded-lg border border-north-200 focus:outline-none focus:ring-2 focus:ring-north-400 focus:border-transparent bg-white transition-all text-north-800 placeholder-north-300"
+								placeholder="Напиши интересc"
+								value={tagInput}
+								onKeyDown={addTag}
+								onChange={(e) => setTagInput(e.target.value)}
+							/>
+							<p className="text-xs text-north-400 mt-1">Нажми на Enter для добавления тэга</p>
+						</div>
 
-            <Button className="w-full mt-8" onClick={handleRegister} disabled={!isValid}>
-              Регистрация
-            </Button>
-            <button onClick={() => setStep(2)} className="w-full text-center text-sm text-north-500 mt-2 hover:underline">
-              Назад
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+						<Button className="w-full mt-8" onClick={handleRegister} disabled={!isValid}>
+							Регистрация
+						</Button>
+						<button
+							type="button"
+							onClick={() => setStep(2)}
+							className="w-full text-center text-sm text-north-500 mt-2 hover:underline"
+						>
+							Назад
+						</button>
+					</div>
+				)}
+			</div>
+		</div>
+	);
 };
 
 export default Register;
