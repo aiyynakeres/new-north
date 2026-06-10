@@ -8,7 +8,7 @@ import {
   User,
 } from '../types';
 
-const BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+const BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('token');
