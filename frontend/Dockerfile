@@ -7,7 +7,6 @@ COPY . .
 RUN pnpm run build
 
 FROM nginx:alpine
-ENV BACKEND_UPSTREAM=http://backend:8080 NGINX_RESOLVER=127.0.0.11
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY default.conf.template /etc/nginx/templates/default.conf.template
 EXPOSE 80
