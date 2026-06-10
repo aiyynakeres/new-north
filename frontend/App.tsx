@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { HashRouter as Router, Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import Header from './layout/Header';
 import Footer from './layout/Footer';
 import Register from './pages/Register';

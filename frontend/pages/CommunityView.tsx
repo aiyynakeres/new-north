@@ -52,16 +52,24 @@ const CommunityView: React.FC<Props> = ({ currentUser }) => {
   const handleJoin = async () => {
     if (!currentUser || !community) return;
     setMsg('');
-    const r = await api.joinCommunity(community.id, currentUser.id);
-    if (!r.ok && r.error === 'blocked') setMsg('Вам закрыт доступ к этому сообществу.');
+    try {
+      const r = await api.joinCommunity(community.id, currentUser.id);
+      if (!r.ok && r.error === 'blocked') setMsg('Вам закрыт доступ к этому сообществу.');
+    } catch {
+      setMsg('Вам закрыт доступ к этому сообществу.');
+    }
     await refresh();
   };
 
   const handleLeave = async () => {
     if (!currentUser || !community) return;
     setMsg('');
-    const r = await api.leaveCommunity(community.id, currentUser.id);
-    if (!r.ok && r.error === 'creator_cannot_leave') {
+    try {
+      const r = await api.leaveCommunity(community.id, currentUser.id);
+      if (!r.ok && r.error === 'creator_cannot_leave') {
+        setMsg('Создатель не может покинуть сообщество (передайте права или удалите группу в будущей версии).');
+      }
+    } catch {
       setMsg('Создатель не может покинуть сообщество (передайте права или удалите группу в будущей версии).');
     }
     await refresh();
