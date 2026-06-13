@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -14,10 +15,31 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
+
+	// Database
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		databaseURL = "postgres://newnorth:newnorth@localhost:5432/newnorth?sslmode=disable"
+	}
+
+	db, err := store.NewDB(ctx, databaseURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	if err := db.Migrate(ctx); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
 	// Initialize store
-	st := store.New()
-	st.Init()
-	store.Global = st
+	st := store.New(db)
+
+	// Seed data
+	if err := st.Seed(ctx); err != nil {
+		log.Printf("Warning: failed to seed data: %v", err)
+	}
 
 	// Handlers
 	authH := &handlers.AuthHandler{Store: st}
