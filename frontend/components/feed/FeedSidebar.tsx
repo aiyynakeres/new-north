@@ -17,8 +17,8 @@ const FeedSidebar: React.FC = () => {
 				api.getAuthorsLeaderboard(),
 				api.getCommunitiesByMemberCount(),
 			]);
-			setTopAuthors(authors.slice(0, TOP_LIMIT));
-			setTopCommunities(comms.slice(0, TOP_LIMIT));
+			setTopAuthors((authors ?? []).slice(0, TOP_LIMIT));
+			setTopCommunities((comms ?? []).slice(0, TOP_LIMIT));
 		})();
 	}, []);
 

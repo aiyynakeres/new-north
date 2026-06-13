@@ -52,13 +52,7 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
 
 	const handlePostComment = async () => {
 		if (!currentUser || !commentText.trim() || !article) return;
-		const newComment: Comment = {
-			id: `c${Date.now()}`,
-			authorId: currentUser.id,
-			text: commentText,
-			createdAt: new Date().toISOString(),
-		};
-		const updatedArticle = await api.addComment(article.id, newComment);
+		const updatedArticle = await api.addComment(article.id, commentText.trim());
 		if (updatedArticle) {
 			setArticle(updatedArticle);
 			setCommentText("");

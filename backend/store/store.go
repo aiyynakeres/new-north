@@ -1,57 +1,25 @@
 package store
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"new-north-backend/models"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Store struct {
-	mu           sync.RWMutex
-	users        map[string]*models.User
-	articles     map[string]*models.Article
-	communities  map[string]*models.Community
-	following    map[string]map[string]bool
-	sessions     map[string]string
-	telegramToID map[string]string
+	db *DB
 }
 
-var Global *Store
-
-func New() *Store {
-	return &Store{
-		users:        make(map[string]*models.User),
-		articles:     make(map[string]*models.Article),
-		communities:  make(map[string]*models.Community),
-		following:    make(map[string]map[string]bool),
-		sessions:     make(map[string]string),
-		telegramToID: make(map[string]string),
-	}
+func New(db *DB) *Store {
+	return &Store{db: db}
 }
-
-func (s *Store) Init() {
-	for i := range initialUsers {
-		u := initialUsers[i]
-		s.users[u.ID] = &u
-		s.telegramToID[u.TelegramHandle] = u.ID
-	}
-	for i := range initialCommunities {
-		c := initialCommunities[i]
-		models.NormalizeCommunity(&c)
-		s.communities[c.ID] = &c
-	}
-	for i := range initialArticles {
-		a := initialArticles[i]
-		models.NormalizeArticle(&a)
-		s.articles[a.ID] = &a
-	}
-}
-
-// --- Auth ---
 
 func (s *Store) IsAuthCodeValid(code string) bool {
 	return code == "123456"
@@ -61,301 +29,301 @@ func (s *Store) VerifyAuthCode(telegramHandle, code string) *models.User {
 	if code != "123456" {
 		return nil
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	id, ok := s.telegramToID[telegramHandle]
-	if !ok {
-		return nil
-	}
-	u := s.users[id]
-	if u == nil {
-		return nil
-	}
-	cp := *u
-	return &cp
+	return s.GetUserByTelegramHandle(telegramHandle)
 }
 
 func (s *Store) CreateSession(userID string) string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	ctx := context.Background()
 	token := fmt.Sprintf("sess_%d_%s", time.Now().UnixNano(), userID)
-	s.sessions[token] = userID
+	_, err := s.db.Pool.Exec(ctx, "INSERT INTO sessions (token, user_id) VALUES ($1, $2)", token, userID)
+	if err != nil {
+		return ""
+	}
 	return token
 }
 
 func (s *Store) LookupToken(token string) (string, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	userID, ok := s.sessions[token]
-	return userID, ok
+	ctx := context.Background()
+	var userID string
+	err := s.db.Pool.QueryRow(ctx, "SELECT user_id FROM sessions WHERE token = $1", token).Scan(&userID)
+	if err != nil {
+		return "", false
+	}
+	return userID, true
 }
 
 func (s *Store) GetUserByToken(token string) *models.User {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	userID, ok := s.sessions[token]
-	if !ok {
+	ctx := context.Background()
+	var userID string
+	err := s.db.Pool.QueryRow(ctx, "SELECT user_id FROM sessions WHERE token = $1", token).Scan(&userID)
+	if err != nil {
 		return nil
 	}
-	u, ok := s.users[userID]
-	if !ok || u == nil {
-		return nil
-	}
-	cp := *u
-	return &cp
+	return s.GetUserByID(userID)
 }
 
-// --- Users ---
-
 func (s *Store) GetUsers() []*models.User {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]*models.User, 0, len(s.users))
-	for _, u := range s.users {
-		cp := *u
-		result = append(result, &cp)
+	ctx := context.Background()
+	rows, err := s.db.Pool.Query(ctx, "SELECT id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at::text FROM users ORDER BY joined_at DESC")
+	if err != nil {
+		return []*models.User{}
+	}
+	defer rows.Close()
+
+	var result []*models.User
+	for rows.Next() {
+		u := scanUser(rows)
+		if u != nil {
+			result = append(result, u)
+		}
+	}
+	if result == nil {
+		result = []*models.User{}
 	}
 	return result
 }
 
 func (s *Store) GetUserByID(id string) *models.User {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	u, ok := s.users[id]
-	if !ok || u == nil {
+	ctx := context.Background()
+	rows, err := s.db.Pool.Query(ctx, "SELECT id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at::text FROM users WHERE id = $1", id)
+	if err != nil {
 		return nil
 	}
-	cp := *u
-	return &cp
+	defer rows.Close()
+
+	if rows.Next() {
+		return scanUser(rows)
+	}
+	return nil
 }
 
 func (s *Store) GetUserByTelegramHandle(handle string) *models.User {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	id, ok := s.telegramToID[handle]
-	if !ok {
+	ctx := context.Background()
+	rows, err := s.db.Pool.Query(ctx, "SELECT id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at::text FROM users WHERE telegram_handle = $1", handle)
+	if err != nil {
 		return nil
 	}
-	u, ok := s.users[id]
-	if !ok || u == nil {
-		return nil
+	defer rows.Close()
+
+	if rows.Next() {
+		return scanUser(rows)
 	}
-	cp := *u
-	return &cp
+	return nil
 }
 
 func (s *Store) SaveUser(user *models.User) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.users[user.ID] = user
-	s.telegramToID[user.TelegramHandle] = user.ID
+	ctx := context.Background()
+	_, err := s.db.Pool.Exec(ctx,
+		`INSERT INTO users (id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		 ON CONFLICT (id) DO UPDATE SET
+		 telegram_handle = EXCLUDED.telegram_handle,
+		 full_name = EXCLUDED.full_name,
+		 avatar_url = EXCLUDED.avatar_url,
+		 banner_url = EXCLUDED.banner_url,
+		 bio = EXCLUDED.bio,
+		 tags = EXCLUDED.tags`,
+		user.ID, user.TelegramHandle, user.FullName, user.AvatarURL, user.BannerURL, user.Bio, user.Tags, user.JoinedAt)
+	if err != nil {
+		return
+	}
 }
 
 func (s *Store) CreateUser(handle, fullName, bio string, tags []string) *models.User {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	user := &models.User{
-		ID:             "u" + fmt.Sprintf("%d", time.Now().UnixNano()),
+	ctx := context.Background()
+	id := "u" + fmt.Sprintf("%d", time.Now().UnixNano())
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := s.db.Pool.Exec(ctx,
+		`INSERT INTO users (id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		id, handle, fullName, "https://picsum.photos/200/200?grayscale", "https://picsum.photos/1200/400?grayscale", bio, tags, now)
+	if err != nil {
+		return nil
+	}
+	return &models.User{
+		ID:             id,
 		TelegramHandle: handle,
 		FullName:       fullName,
 		AvatarURL:      "https://picsum.photos/200/200?grayscale",
 		BannerURL:      "https://picsum.photos/1200/400?grayscale",
 		Bio:            bio,
 		Tags:           tags,
-		JoinedAt:       time.Now().UTC().Format(time.RFC3339),
+		JoinedAt:       now,
 	}
-	s.users[user.ID] = user
-	s.telegramToID[handle] = user.ID
-	cp := *user
-	return &cp
 }
 
-// --- Articles ---
-
 func (s *Store) GetArticles() []*models.Article {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]*models.Article, 0, len(s.articles))
-	for _, a := range s.articles {
-		cp := *a
-		models.NormalizeArticle(&cp)
-		result = append(result, &cp)
-	}
-	return result
+	ctx := context.Background()
+	return queryArticles(ctx, s.db.Pool, "SELECT id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at::text, updated_at::text, views, comments_count FROM articles ORDER BY created_at DESC")
 }
 
 func (s *Store) GetArticlesForPublicFeed() []*models.Article {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]*models.Article, 0)
-	for _, a := range s.articles {
-		if a.Audience != "community_only" {
-			cp := *a
-			models.NormalizeArticle(&cp)
-			result = append(result, &cp)
-		}
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreatedAt > result[j].CreatedAt
-	})
-	return result
+	ctx := context.Background()
+	return queryArticles(ctx, s.db.Pool,
+		`SELECT a.id, a.author_id, a.community_id, a.audience, a.title, a.preview, a.content, a.blocks, a.tags, a.created_at::text, a.updated_at::text, a.views, a.comments_count
+		 FROM articles a
+		 WHERE a.audience != 'community_only'
+		 ORDER BY a.created_at DESC`)
 }
 
 func (s *Store) GetArticleByID(id string) *models.Article {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	a, ok := s.articles[id]
-	if !ok || a == nil {
+	ctx := context.Background()
+	articles := queryArticles(ctx, s.db.Pool,
+		`SELECT id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at::text, updated_at::text, views, comments_count
+		 FROM articles WHERE id = $1`, id)
+	if len(articles) == 0 {
 		return nil
 	}
-	cp := *a
-	models.NormalizeArticle(&cp)
-	return &cp
+	return articles[0]
 }
 
 func (s *Store) SaveArticle(article *models.Article) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	ctx := context.Background()
+	blocksJSON, _ := json.Marshal(article.Blocks)
 	models.NormalizeArticle(article)
-	if article.Audience == "community_only" && (article.CommunityID == nil || *article.CommunityID == "") {
-		article.Audience = "public"
+
+	_, err := s.db.Pool.Exec(ctx,
+		`INSERT INTO articles (id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at, updated_at, views, comments_count)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		 ON CONFLICT (id) DO UPDATE SET
+		 community_id = EXCLUDED.community_id,
+		 audience = EXCLUDED.audience,
+		 title = EXCLUDED.title,
+		 preview = EXCLUDED.preview,
+		 content = EXCLUDED.content,
+		 blocks = EXCLUDED.blocks,
+		 tags = EXCLUDED.tags,
+		 updated_at = EXCLUDED.updated_at,
+		 views = EXCLUDED.views,
+		 comments_count = EXCLUDED.comments_count`,
+		article.ID, article.AuthorID, article.CommunityID, article.Audience,
+		article.Title, article.Preview, article.Content, blocksJSON,
+		article.Tags, article.CreatedAt, article.UpdatedAt,
+		article.Views, article.CommentsCount)
+	if err != nil {
+		return
 	}
-	s.articles[article.ID] = article
 }
 
 func (s *Store) CreateArticle(input models.CreateArticleInput, authorID string) *models.Article {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	audience := input.Audience
-	if audience == "" {
-		audience = "public"
+	ctx := context.Background()
+	article := &models.Article{
+		ID:       models.NewID(),
+		AuthorID: authorID,
+		Title:    input.Title,
+		Preview:  input.Preview,
+		Blocks:   input.Blocks,
+		Tags:     input.Tags,
 	}
-	if audience == "community_only" && (input.CommunityID == nil || *input.CommunityID == "") {
-		audience = "public"
+	if input.CommunityID != nil && *input.CommunityID != "" {
+		article.CommunityID = input.CommunityID
+	}
+	article.Audience = input.Audience
+	if article.Audience == "" {
+		article.Audience = "public"
+	}
+	if article.Audience == "community_only" && (article.CommunityID == nil || *article.CommunityID == "") {
+		article.Audience = "public"
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
-	article := &models.Article{
-		ID:            models.NewID(),
-		AuthorID:      authorID,
-		CommunityID:   input.CommunityID,
-		Audience:      audience,
-		Title:         input.Title,
-		Preview:       input.Preview,
-		Content:       generateContentFromBlocks(input.Blocks),
-		Blocks:        input.Blocks,
-		Tags:          input.Tags,
-		CreatedAt:     now,
-		Views:         0,
-		CommentsCount: 0,
-		Comments:      []models.Comment{},
-		Reactions:     []models.ArticleReaction{},
+	article.CreatedAt = now
+	article.Content = generateContentFromBlocks(input.Blocks)
+
+	blocksJSON, _ := json.Marshal(input.Blocks)
+	_, err := s.db.Pool.Exec(ctx,
+		`INSERT INTO articles (id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at, views, comments_count)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0, 0)`,
+		article.ID, authorID, article.CommunityID, article.Audience,
+		article.Title, article.Preview, article.Content, blocksJSON,
+		article.Tags, now)
+	if err != nil {
+		return nil
 	}
-	s.articles[article.ID] = article
-	cp := *article
-	return &cp
+	return article
 }
 
 func (s *Store) UpdateArticle(id string, input models.UpdateArticleInput) *models.Article {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	a, ok := s.articles[id]
-	if !ok || a == nil {
+	ctx := context.Background()
+	existing := s.GetArticleByID(id)
+	if existing == nil {
 		return nil
 	}
+
 	if input.Title != nil {
-		a.Title = *input.Title
+		existing.Title = *input.Title
 	}
 	if input.Preview != nil {
-		a.Preview = *input.Preview
+		existing.Preview = *input.Preview
 	}
 	if input.Audience != nil {
-		a.Audience = *input.Audience
+		existing.Audience = *input.Audience
 	}
 	if input.Blocks != nil {
-		a.Blocks = *input.Blocks
-		a.Content = generateContentFromBlocks(*input.Blocks)
+		existing.Blocks = *input.Blocks
+		existing.Content = generateContentFromBlocks(*input.Blocks)
 	}
 	if input.Tags != nil {
-		a.Tags = *input.Tags
+		existing.Tags = *input.Tags
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
-	a.UpdatedAt = &now
-	cp := *a
-	models.NormalizeArticle(&cp)
-	return &cp
+	existing.UpdatedAt = &now
+
+	blocksJSON, _ := json.Marshal(existing.Blocks)
+	_, err := s.db.Pool.Exec(ctx,
+		`UPDATE articles SET title = $1, preview = $2, audience = $3, content = $4, blocks = $5, tags = $6, updated_at = $7
+		 WHERE id = $8`,
+		existing.Title, existing.Preview, existing.Audience, existing.Content,
+		blocksJSON, existing.Tags, now, id)
+	if err != nil {
+		return nil
+	}
+	return existing
 }
 
 func (s *Store) DeleteArticle(id string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.articles, id)
+	ctx := context.Background()
+	s.db.Pool.Exec(ctx, "DELETE FROM articles WHERE id = $1", id)
 }
 
 func (s *Store) GetArticlesByCommunityID(communityID string) []*models.Article {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]*models.Article, 0)
-	for _, a := range s.articles {
-		if a.CommunityID != nil && *a.CommunityID == communityID {
-			cp := *a
-			models.NormalizeArticle(&cp)
-			result = append(result, &cp)
-		}
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreatedAt > result[j].CreatedAt
-	})
-	return result
+	ctx := context.Background()
+	return queryArticles(ctx, s.db.Pool,
+		`SELECT id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at::text, updated_at::text, views, comments_count
+		 FROM articles WHERE community_id = $1
+		 ORDER BY created_at DESC`, communityID)
 }
 
 func (s *Store) GetArticlesForProfile(authorID string, viewerID *string) []*models.Article {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]*models.Article, 0)
-	for _, a := range s.articles {
-		if a.AuthorID != authorID {
-			continue
-		}
-		if viewerID != nil && *viewerID == authorID {
-			cp := *a
-			models.NormalizeArticle(&cp)
-			result = append(result, &cp)
-			continue
-		}
-		if a.Audience != "community_only" {
-			cp := *a
-			models.NormalizeArticle(&cp)
-			result = append(result, &cp)
-		}
+	ctx := context.Background()
+	var articles []*models.Article
+	if viewerID != nil && *viewerID == authorID {
+		articles = queryArticles(ctx, s.db.Pool,
+			`SELECT id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at::text, updated_at::text, views, comments_count
+			 FROM articles WHERE author_id = $1
+			 ORDER BY created_at DESC`, authorID)
+	} else {
+		articles = queryArticles(ctx, s.db.Pool,
+			`SELECT id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at::text, updated_at::text, views, comments_count
+			 FROM articles WHERE author_id = $1 AND audience != 'community_only'
+			 ORDER BY created_at DESC`, authorID)
 	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreatedAt > result[j].CreatedAt
-	})
-	return result
+	return articles
 }
 
 func (s *Store) CountArticlesByAuthor(authorID string) int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	count := 0
-	for _, a := range s.articles {
-		if a.AuthorID == authorID {
-			count++
-		}
-	}
+	ctx := context.Background()
+	var count int
+	s.db.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM articles WHERE author_id = $1", authorID).Scan(&count)
 	return count
 }
 
 func (s *Store) IncrementArticleViews(id string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if a, ok := s.articles[id]; ok && a != nil {
-		a.Views++
-	}
+	ctx := context.Background()
+	s.db.Pool.Exec(ctx, "UPDATE articles SET views = views + 1 WHERE id = $1", id)
 }
 
 func (s *Store) CanEditArticle(userID string, article *models.Article) bool {
-	if userID == "" {
+	if userID == "" || article == nil {
 		return false
 	}
 	if article.AuthorID == userID {
@@ -371,88 +339,80 @@ func (s *Store) CanEditArticle(userID string, article *models.Article) bool {
 	return c.CreatorID == userID || contains(c.AdminIDs, userID)
 }
 
-// --- Comments ---
-
 func (s *Store) AddComment(articleID string, comment *models.Comment) *models.Article {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	a, ok := s.articles[articleID]
-	if !ok || a == nil {
+	ctx := context.Background()
+	_, err := s.db.Pool.Exec(ctx,
+		`INSERT INTO comments (id, article_id, author_id, text, created_at) VALUES ($1, $2, $3, $4, $5)`,
+		comment.ID, articleID, comment.AuthorID, comment.Text, comment.CreatedAt)
+	if err != nil {
 		return nil
 	}
-	a.Comments = append(a.Comments, *comment)
-	a.CommentsCount = len(a.Comments)
-	cp := *a
-	models.NormalizeArticle(&cp)
-	return &cp
+	s.db.Pool.Exec(ctx, "UPDATE articles SET comments_count = comments_count + 1 WHERE id = $1", articleID)
+	return s.GetArticleByID(articleID)
 }
-
-// --- Reactions ---
 
 func (s *Store) ToggleArticleReaction(articleID, userID, emoji string) *models.Article {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	a, ok := s.articles[articleID]
-	if !ok || a == nil {
-		return nil
-	}
-	reactions := a.Reactions
-	if reactions == nil {
-		reactions = []models.ArticleReaction{}
-	}
-	hit := -1
-	for i, r := range reactions {
-		if r.UserID == userID && r.Emoji == emoji {
-			hit = i
-			break
-		}
-	}
-	if hit >= 0 {
-		a.Reactions = append(reactions[:hit], reactions[hit+1:]...)
+	ctx := context.Background()
+	var exists int
+	err := s.db.Pool.QueryRow(ctx,
+		"SELECT 1 FROM article_reactions WHERE article_id = $1 AND user_id = $2 AND emoji = $3",
+		articleID, userID, emoji).Scan(&exists)
+
+	if err == nil {
+		s.db.Pool.Exec(ctx, "DELETE FROM article_reactions WHERE article_id = $1 AND user_id = $2 AND emoji = $3",
+			articleID, userID, emoji)
 	} else {
-		a.Reactions = append(reactions, models.ArticleReaction{Emoji: emoji, UserID: userID})
+		s.db.Pool.Exec(ctx,
+			"INSERT INTO article_reactions (article_id, user_id, emoji) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+			articleID, userID, emoji)
 	}
-	cp := *a
-	models.NormalizeArticle(&cp)
-	return &cp
+	return s.GetArticleByID(articleID)
 }
 
-// --- Communities ---
-
 func (s *Store) GetCommunities() []*models.Community {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]*models.Community, 0, len(s.communities))
-	for _, c := range s.communities {
-		cp := *c
-		models.NormalizeCommunity(&cp)
-		result = append(result, &cp)
-	}
-	return result
+	ctx := context.Background()
+	return queryCommunities(ctx, s.db.Pool, "SELECT id, name, about_short, description, cover_url, creator_id, admin_ids, member_ids, blocked_user_ids, created_at::text FROM communities ORDER BY cardinality(member_ids) DESC, name ASC")
 }
 
 func (s *Store) GetCommunityByID(id string) *models.Community {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	c, ok := s.communities[id]
-	if !ok || c == nil {
+	ctx := context.Background()
+	rows, err := s.db.Pool.Query(ctx,
+		"SELECT id, name, about_short, description, cover_url, creator_id, admin_ids, member_ids, blocked_user_ids, created_at::text FROM communities WHERE id = $1", id)
+	if err != nil {
 		return nil
 	}
-	cp := *c
-	models.NormalizeCommunity(&cp)
-	return &cp
+	defer rows.Close()
+
+	if rows.Next() {
+		return scanCommunity(rows)
+	}
+	return nil
 }
 
 func (s *Store) SaveCommunity(community *models.Community) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	ctx := context.Background()
 	models.NormalizeCommunity(community)
-	s.communities[community.ID] = community
+	_, err := s.db.Pool.Exec(ctx,
+		`INSERT INTO communities (id, name, about_short, description, cover_url, creator_id, admin_ids, member_ids, blocked_user_ids, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		 ON CONFLICT (id) DO UPDATE SET
+		 name = EXCLUDED.name,
+		 about_short = EXCLUDED.about_short,
+		 description = EXCLUDED.description,
+		 cover_url = EXCLUDED.cover_url,
+		 admin_ids = EXCLUDED.admin_ids,
+		 member_ids = EXCLUDED.member_ids,
+		 blocked_user_ids = EXCLUDED.blocked_user_ids`,
+		community.ID, community.Name, community.AboutShort, community.Description,
+		community.CoverURL, community.CreatorID, community.AdminIDs,
+		community.MemberIDs, community.BlockedUserIDs, community.CreatedAt)
+	if err != nil {
+		return
+	}
 }
 
 func (s *Store) CreateCommunity(input models.CreateCommunityInput, creatorID string) *models.Community {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	ctx := context.Background()
 	now := time.Now().UTC().Format(time.RFC3339)
 	c := &models.Community{
 		ID:             models.NewID(),
@@ -467,48 +427,33 @@ func (s *Store) CreateCommunity(input models.CreateCommunityInput, creatorID str
 		CreatedAt:      now,
 	}
 	models.NormalizeCommunity(c)
-	s.communities[c.ID] = c
-	cp := *c
-	return &cp
+	_, err := s.db.Pool.Exec(ctx,
+		`INSERT INTO communities (id, name, about_short, description, cover_url, creator_id, admin_ids, member_ids, blocked_user_ids, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		c.ID, c.Name, c.AboutShort, c.Description, c.CoverURL, c.CreatorID,
+		c.AdminIDs, c.MemberIDs, c.BlockedUserIDs, now)
+	if err != nil {
+		return nil
+	}
+	return c
 }
 
 func (s *Store) GetCommunitiesForMember(userID string) []*models.Community {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]*models.Community, 0)
-	for _, c := range s.communities {
-		if contains(c.MemberIDs, userID) {
-			cp := *c
-			models.NormalizeCommunity(&cp)
-			result = append(result, &cp)
-		}
-	}
-	return result
+	ctx := context.Background()
+	return queryCommunities(ctx, s.db.Pool,
+		`SELECT id, name, about_short, description, cover_url, creator_id, admin_ids, member_ids, blocked_user_ids, created_at::text
+		 FROM communities WHERE $1 = ANY(member_ids)
+		 ORDER BY name ASC`, userID)
 }
 
 func (s *Store) GetCommunitiesByMemberCount() []*models.Community {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]*models.Community, 0, len(s.communities))
-	for _, c := range s.communities {
-		cp := *c
-		models.NormalizeCommunity(&cp)
-		result = append(result, &cp)
-	}
-	sort.Slice(result, func(i, j int) bool {
-		if len(result[i].MemberIDs) != len(result[j].MemberIDs) {
-			return len(result[i].MemberIDs) > len(result[j].MemberIDs)
-		}
-		return result[i].Name < result[j].Name
-	})
-	return result
+	return s.GetCommunities()
 }
 
 func (s *Store) JoinCommunity(communityID, userID string) models.JoinResult {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	c, ok := s.communities[communityID]
-	if !ok || c == nil {
+	ctx := context.Background()
+	c := s.GetCommunityByID(communityID)
+	if c == nil {
 		return models.JoinResult{OK: false, Error: "not_found"}
 	}
 	if contains(c.BlockedUserIDs, userID) {
@@ -517,30 +462,39 @@ func (s *Store) JoinCommunity(communityID, userID string) models.JoinResult {
 	if contains(c.MemberIDs, userID) {
 		return models.JoinResult{OK: true}
 	}
-	c.MemberIDs = append(c.MemberIDs, userID)
+	_, err := s.db.Pool.Exec(ctx,
+		"UPDATE communities SET member_ids = array_append(member_ids, $1) WHERE id = $2 AND NOT ($1 = ANY(member_ids))",
+		userID, communityID)
+	if err != nil {
+		return models.JoinResult{OK: false, Error: "db_error"}
+	}
 	return models.JoinResult{OK: true}
 }
 
 func (s *Store) LeaveCommunity(communityID, userID string) models.JoinResult {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	c, ok := s.communities[communityID]
-	if !ok || c == nil {
+	ctx := context.Background()
+	c := s.GetCommunityByID(communityID)
+	if c == nil {
 		return models.JoinResult{OK: false, Error: "not_found"}
 	}
 	if c.CreatorID == userID {
 		return models.JoinResult{OK: false, Error: "creator_cannot_leave"}
 	}
-	c.MemberIDs = removeString(c.MemberIDs, userID)
-	c.AdminIDs = removeString(c.AdminIDs, userID)
+	_, err := s.db.Pool.Exec(ctx,
+		`UPDATE communities SET
+		 member_ids = array_remove(member_ids, $1),
+		 admin_ids = array_remove(admin_ids, $1)
+		 WHERE id = $2`, userID, communityID)
+	if err != nil {
+		return models.JoinResult{OK: false, Error: "db_error"}
+	}
 	return models.JoinResult{OK: true}
 }
 
 func (s *Store) PromoteCommunityAdmin(communityID, actorID, targetUserID string) models.JoinResult {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	c, ok := s.communities[communityID]
-	if !ok || c == nil {
+	ctx := context.Background()
+	c := s.GetCommunityByID(communityID)
+	if c == nil {
 		return models.JoinResult{OK: false, Error: "not_found"}
 	}
 	if c.CreatorID != actorID {
@@ -549,17 +503,19 @@ func (s *Store) PromoteCommunityAdmin(communityID, actorID, targetUserID string)
 	if !contains(c.MemberIDs, targetUserID) {
 		return models.JoinResult{OK: false, Error: "not_member"}
 	}
-	if !contains(c.AdminIDs, targetUserID) {
-		c.AdminIDs = append(c.AdminIDs, targetUserID)
+	_, err := s.db.Pool.Exec(ctx,
+		"UPDATE communities SET admin_ids = array_append(admin_ids, $1) WHERE id = $2 AND NOT ($1 = ANY(admin_ids))",
+		targetUserID, communityID)
+	if err != nil {
+		return models.JoinResult{OK: false, Error: "db_error"}
 	}
 	return models.JoinResult{OK: true}
 }
 
 func (s *Store) BlockUserFromCommunity(communityID, actorID, targetUserID string) models.JoinResult {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	c, ok := s.communities[communityID]
-	if !ok || c == nil {
+	ctx := context.Background()
+	c := s.GetCommunityByID(communityID)
+	if c == nil {
 		return models.JoinResult{OK: false, Error: "not_found"}
 	}
 	isMod := c.CreatorID == actorID || contains(c.AdminIDs, actorID)
@@ -569,81 +525,267 @@ func (s *Store) BlockUserFromCommunity(communityID, actorID, targetUserID string
 	if targetUserID == c.CreatorID {
 		return models.JoinResult{OK: false, Error: "cannot_block_creator"}
 	}
-	c.MemberIDs = removeString(c.MemberIDs, targetUserID)
-	c.AdminIDs = removeString(c.AdminIDs, targetUserID)
-	if !contains(c.BlockedUserIDs, targetUserID) {
-		c.BlockedUserIDs = append(c.BlockedUserIDs, targetUserID)
+	_, err := s.db.Pool.Exec(ctx,
+		`UPDATE communities SET
+		 member_ids = array_remove(member_ids, $1),
+		 admin_ids = array_remove(admin_ids, $1),
+		 blocked_user_ids = CASE WHEN NOT ($1 = ANY(blocked_user_ids)) THEN array_append(blocked_user_ids, $1) ELSE blocked_user_ids END
+		 WHERE id = $2`,
+		targetUserID, communityID)
+	if err != nil {
+		return models.JoinResult{OK: false, Error: "db_error"}
 	}
 	return models.JoinResult{OK: true}
 }
-
-// --- Following ---
 
 func (s *Store) IsFollowingUser(followerID, targetUserID string) bool {
 	if followerID == targetUserID {
 		return false
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	set, ok := s.following[followerID]
-	return ok && set[targetUserID]
+	ctx := context.Background()
+	var exists int
+	err := s.db.Pool.QueryRow(ctx,
+		"SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2",
+		followerID, targetUserID).Scan(&exists)
+	return err == nil
 }
 
 func (s *Store) FollowUser(followerID, targetUserID string) {
 	if followerID == targetUserID {
 		return
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.following[followerID] == nil {
-		s.following[followerID] = make(map[string]bool)
-	}
-	s.following[followerID][targetUserID] = true
+	ctx := context.Background()
+	s.db.Pool.Exec(ctx,
+		"INSERT INTO follows (follower_id, target_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+		followerID, targetUserID)
 }
 
 func (s *Store) UnfollowUser(followerID, targetUserID string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if set, ok := s.following[followerID]; ok {
-		delete(set, targetUserID)
-	}
+	ctx := context.Background()
+	s.db.Pool.Exec(ctx,
+		"DELETE FROM follows WHERE follower_id = $1 AND target_id = $2",
+		followerID, targetUserID)
 }
 
 func (s *Store) GetFollowing(followerID string) []string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]string, 0)
-	for id := range s.following[followerID] {
-		result = append(result, id)
+	ctx := context.Background()
+	rows, err := s.db.Pool.Query(ctx, "SELECT target_id FROM follows WHERE follower_id = $1", followerID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var result []string
+	for rows.Next() {
+		var targetID string
+		rows.Scan(&targetID)
+		result = append(result, targetID)
 	}
 	return result
 }
 
-// --- Leaderboard ---
-
 func (s *Store) GetAuthorsLeaderboard() []models.LeaderboardEntry {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	entries := make([]models.LeaderboardEntry, 0, len(s.users))
-	for _, u := range s.users {
-		count := 0
-		for _, a := range s.articles {
-			if a.AuthorID == u.ID {
-				count++
-			}
-		}
-		entries = append(entries, models.LeaderboardEntry{User: *u, ArticleCount: count})
+	ctx := context.Background()
+	rows, err := s.db.Pool.Query(ctx,
+		`SELECT u.id, u.telegram_handle, u.full_name, u.avatar_url, u.banner_url, u.bio, u.tags, u.joined_at,
+		        COUNT(a.id) AS article_count
+		 FROM users u
+		 LEFT JOIN articles a ON a.author_id = u.id
+		 GROUP BY u.id
+		 ORDER BY article_count DESC, u.full_name ASC`)
+	if err != nil {
+		return nil
 	}
-	sort.Slice(entries, func(i, j int) bool {
-		if entries[i].ArticleCount != entries[j].ArticleCount {
-			return entries[i].ArticleCount > entries[j].ArticleCount
-		}
-		return strings.Compare(entries[i].User.FullName, entries[j].User.FullName) < 0
-	})
+	defer rows.Close()
+
+	var entries []models.LeaderboardEntry
+	for rows.Next() {
+		var u models.User
+		var count int
+		rows.Scan(&u.ID, &u.TelegramHandle, &u.FullName, &u.AvatarURL, &u.BannerURL, &u.Bio, &u.Tags, &u.JoinedAt, &count)
+		entries = append(entries, models.LeaderboardEntry{User: u, ArticleCount: count})
+	}
 	return entries
 }
 
-// --- Helpers ---
+func (s *Store) Seed(ctx context.Context) error {
+	for i := range initialUsers {
+		u := initialUsers[i]
+		_, err := s.db.Pool.Exec(ctx,
+			`INSERT INTO users (id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING`,
+			u.ID, u.TelegramHandle, u.FullName, u.AvatarURL, u.BannerURL, u.Bio, u.Tags, u.JoinedAt)
+		if err != nil {
+			return err
+		}
+	}
+	for i := range initialCommunities {
+		c := initialCommunities[i]
+		models.NormalizeCommunity(&c)
+		_, err := s.db.Pool.Exec(ctx,
+			`INSERT INTO communities (id, name, about_short, description, cover_url, creator_id, admin_ids, member_ids, blocked_user_ids, created_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (id) DO NOTHING`,
+			c.ID, c.Name, c.AboutShort, c.Description, c.CoverURL, c.CreatorID, c.AdminIDs, c.MemberIDs, c.BlockedUserIDs, c.CreatedAt)
+		if err != nil {
+			return err
+		}
+	}
+	for i := range initialArticles {
+		a := initialArticles[i]
+		models.NormalizeArticle(&a)
+		blocksJSON, _ := json.Marshal(a.Blocks)
+		_, err := s.db.Pool.Exec(ctx,
+			`INSERT INTO articles (id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at, views, comments_count)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) ON CONFLICT (id) DO NOTHING`,
+			a.ID, a.AuthorID, a.CommunityID, a.Audience, a.Title, a.Preview, a.Content, blocksJSON, a.Tags, a.CreatedAt, a.Views, a.CommentsCount)
+		if err != nil {
+			return err
+		}
+		for _, cm := range a.Comments {
+			_, err := s.db.Pool.Exec(ctx,
+				`INSERT INTO comments (id, article_id, author_id, text, created_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
+				cm.ID, a.ID, cm.AuthorID, cm.Text, cm.CreatedAt)
+			if err != nil {
+				return err
+			}
+		}
+		for _, r := range a.Reactions {
+			_, err := s.db.Pool.Exec(ctx,
+				`INSERT INTO article_reactions (article_id, user_id, emoji) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+				a.ID, r.UserID, r.Emoji)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// -- scan / query helpers --
+
+func scanUser(row pgx.Row) *models.User {
+	var u models.User
+	err := row.Scan(&u.ID, &u.TelegramHandle, &u.FullName, &u.AvatarURL, &u.BannerURL, &u.Bio, &u.Tags, &u.JoinedAt)
+	if err != nil {
+		return nil
+	}
+	return &u
+}
+
+func queryArticles(ctx context.Context, pool *pgxpool.Pool, query string, args ...any) []*models.Article {
+	rows, err := pool.Query(ctx, query, args...)
+	if err != nil {
+		return []*models.Article{}
+	}
+	defer rows.Close()
+
+	var result []*models.Article
+	for rows.Next() {
+		a := scanArticle(rows)
+		if a != nil {
+			loadReactions(ctx, pool, a)
+			loadComments(ctx, pool, a)
+			result = append(result, a)
+		}
+	}
+	if result == nil {
+		result = []*models.Article{}
+	}
+	return result
+}
+
+func scanArticle(row pgx.Row) *models.Article {
+	var a models.Article
+	var blocksJSON []byte
+	var communityID *string
+
+	err := row.Scan(&a.ID, &a.AuthorID, &communityID, &a.Audience, &a.Title, &a.Preview,
+		&a.Content, &blocksJSON, &a.Tags, &a.CreatedAt, &a.UpdatedAt, &a.Views, &a.CommentsCount)
+	if err != nil {
+		return nil
+	}
+
+	a.CommunityID = communityID
+	if len(blocksJSON) > 0 {
+		json.Unmarshal(blocksJSON, &a.Blocks)
+	}
+	if a.Blocks == nil {
+		a.Blocks = []models.ArticleBlock{}
+	}
+	models.NormalizeArticle(&a)
+	return &a
+}
+
+func loadReactions(ctx context.Context, pool *pgxpool.Pool, a *models.Article) {
+	rows, err := pool.Query(ctx, "SELECT emoji, user_id FROM article_reactions WHERE article_id = $1", a.ID)
+	if err != nil {
+		a.Reactions = []models.ArticleReaction{}
+		return
+	}
+	defer rows.Close()
+
+	var reactions []models.ArticleReaction
+	for rows.Next() {
+		var r models.ArticleReaction
+		rows.Scan(&r.Emoji, &r.UserID)
+		reactions = append(reactions, r)
+	}
+	if reactions == nil {
+		reactions = []models.ArticleReaction{}
+	}
+	a.Reactions = reactions
+}
+
+func loadComments(ctx context.Context, pool *pgxpool.Pool, a *models.Article) {
+	rows, err := pool.Query(ctx, "SELECT id, author_id, text, created_at::text FROM comments WHERE article_id = $1 ORDER BY created_at ASC", a.ID)
+	if err != nil {
+		a.Comments = []models.Comment{}
+		return
+	}
+	defer rows.Close()
+
+	var comments []models.Comment
+	for rows.Next() {
+		var c models.Comment
+		rows.Scan(&c.ID, &c.AuthorID, &c.Text, &c.CreatedAt)
+		comments = append(comments, c)
+	}
+	if comments == nil {
+		comments = []models.Comment{}
+	}
+	a.Comments = comments
+}
+
+func scanCommunity(row pgx.Row) *models.Community {
+	var c models.Community
+	err := row.Scan(&c.ID, &c.Name, &c.AboutShort, &c.Description, &c.CoverURL,
+		&c.CreatorID, &c.AdminIDs, &c.MemberIDs, &c.BlockedUserIDs, &c.CreatedAt)
+	if err != nil {
+		return nil
+	}
+	models.NormalizeCommunity(&c)
+	return &c
+}
+
+func queryCommunities(ctx context.Context, pool *pgxpool.Pool, query string, args ...any) []*models.Community {
+	rows, err := pool.Query(ctx, query, args...)
+	if err != nil {
+		return []*models.Community{}
+	}
+	defer rows.Close()
+
+	var result []*models.Community
+	for rows.Next() {
+		c := scanCommunity(rows)
+		if c != nil {
+			result = append(result, c)
+		}
+	}
+	if result == nil {
+		result = []*models.Community{}
+	}
+	return result
+}
 
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
@@ -652,16 +794,6 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
-}
-
-func removeString(slice []string, item string) []string {
-	result := make([]string, 0, len(slice))
-	for _, s := range slice {
-		if s != item {
-			result = append(result, s)
-		}
-	}
-	return result
 }
 
 func generateContentFromBlocks(blocks []models.ArticleBlock) string {

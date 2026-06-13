@@ -43,8 +43,8 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
 						? api.isFollowingUser(currentUser.id, u.id)
 						: Promise.resolve(false),
 				]);
-				setUserArticles(articles);
-				setUserCommunities(communities);
+				setUserArticles(articles ?? []);
+				setUserCommunities(communities ?? []);
 				setAllUsers(allU);
 				setIsFollowing(following);
 				setEditedBio(u.bio);
