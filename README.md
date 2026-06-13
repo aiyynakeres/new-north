@@ -1,27 +1,27 @@
 # new-north
 
-A minimalist blogging platform for the advanced youth of Yakutia to share experiences, inspire, and connect.
+Минималистичная блог-платформа для передовой молодёжи Якутии — делиться опытом, вдохновлять и общаться.
 
-## Stack
+## Стек
 
-- **Backend** — Go (chi router, pgx, PostgreSQL)
-- **Frontend** — React + Vite + TypeScript + Tailwind
-- **Database** — PostgreSQL 17
-- **Infra** — Docker Compose
+- **Бэкенд** — Go (chi router, pgx, PostgreSQL)
+- **Фронтенд** — React + Vite + TypeScript + Tailwind
+- **База данных** — PostgreSQL 17
+- **Инфраструктура** — Docker Compose
 
-## Project structure
+## Структура проекта
 
 ```
 new-north/
 ├── backend/
-│   ├── handlers/         # HTTP handlers
-│   ├── middleware/        # Auth middleware
-│   ├── models/           # Shared types
+│   ├── handlers/         # HTTP-обработчики
+│   ├── middleware/        # Аутентификация
+│   ├── models/           # Типы данных
 │   ├── store/
-│   │   ├── db.go         # PostgreSQL connection & migrations
-│   │   ├── migrations/   # SQL migration files
-│   │   ├── seed.go       # Seed data
-│   │   └── store.go      # Data access layer
+│   │   ├── db.go         # Подключение к PostgreSQL и миграции
+│   │   ├── migrations/   # SQL-файлы миграций
+│   │   ├── seed.go       # Начальные данные
+│   │   └── store.go      # Слой доступа к данным
 │   ├── main.go
 │   ├── Dockerfile
 │   └── go.mod
@@ -36,54 +36,55 @@ new-north/
 └── README.md
 ```
 
-## Running with Docker Compose
+## Разработка
 
-### Production build
+Бэкенд и БД запускаются в Docker, фронтенд — локально (hot reload).
+
+```sh
+# 1. Запустить БД и бэкенд
+docker compose up -d db backend
+
+# 2. Запустить фронтенд локально
+cd frontend
+pnpm install
+pnpm dev
+```
+
+- **Фронтенд** — `http://localhost:3000` (Vite, HMR)
+- **Бэкенд** — `http://localhost:8080`
+
+Vite проксирует `/api` на `localhost:8080`.
+
+## Production-сборка
 
 ```sh
 docker compose up --build
 ```
 
-- **Frontend** — `http://localhost:3000` (nginx, serves built SPA)
-- **Backend** — `http://localhost:8080`
-- **Database** — `localhost:5432`
+- **Фронтенд** — `http://localhost:3000` (nginx, статика)
+- **Бэкенд** — `http://localhost:8080`
+- **База данных** — `localhost:5432`
 
-Data persists in a named volume (project-scoped, e.g. `new-north_pgdata`).
+Данные хранятся в именованном томе (например, `new-north_pgdata`).
 
-### Development (hot reload frontend)
+## Локальный запуск (всё вручную)
 
-```sh
-docker compose --profile dev up
-```
-
-Opens on `http://localhost:3000` with Vite HMR. The production build is not started (profiled separately).
-
-Or run the frontend locally without Docker:
-
-```sh
-cd frontend && pnpm install && pnpm dev
-```
-
-Make sure `db` and `backend` are running (`docker compose up -d db backend`).
-
-## Running locally
-
-### Database
+### База данных
 
 ```sh
 docker compose up -d db
 ```
 
-### Backend
+### Бэкенд
 
 ```sh
 cd backend
 go run .
 ```
 
-Starts on `:8080`, connects to `postgres://newnorth:newnorth@localhost:5432/newnorth`.
+Стартует на `:8080`, подключается к `postgres://newnorth:newnorth@localhost:5432/newnorth`.
 
-### Frontend
+### Фронтенд
 
 ```sh
 cd frontend
@@ -91,24 +92,21 @@ pnpm install
 pnpm dev
 ```
 
-Starts on `:3000`. Set `VITE_API_BASE_URL` in `.env.local` if you need a custom API path (defaults to `/api`).
+Стартует на `:3000`. Укажите `VITE_API_BASE_URL` в `.env.local` для кастомного пути к API (по умолчанию `/api`).
 
-## Rebuilding after code changes
-
-After modifying backend or frontend code:
+## Пересборка бэкенда после изменений
 
 ```sh
 docker compose build backend
-docker compose build frontend
-docker compose up -d
+docker compose up -d backend
 ```
 
-## Environment variables
+## Переменные окружения
 
-| Variable                 | Default                                                              | Description             |
-|--------------------------|----------------------------------------------------------------------|-------------------------|
-| `PORT`                   | `8080`                                                               | Backend listen port     |
-| `DATABASE_URL`           | `postgres://newnorth:newnorth@localhost:5432/newnorth?sslmode=disable` | PostgreSQL connection   |
-| `FRONTEND_URL`           | —                                                                    | CORS origin             |
-| `VITE_API_BASE_URL`      | `/api`                                                               | Frontend API base path  |
-| `VITE_API_PROXY_TARGET`  | `http://localhost:8080`                                               | Vite dev proxy target   |
+| Переменная              | По умолчанию                                                          | Описание                |
+|-------------------------|-----------------------------------------------------------------------|-------------------------|
+| `PORT`                  | `8080`                                                                | Порт бэкенда            |
+| `DATABASE_URL`          | `postgres://newnorth:newnorth@localhost:5432/newnorth?sslmode=disable` | Подключение к PostgreSQL|
+| `FRONTEND_URL`          | —                                                                     | CORS origin             |
+| `VITE_API_BASE_URL`     | `/api`                                                                | Базовый путь API для фронтенда |
+| `VITE_API_PROXY_TARGET` | `http://localhost:8080`                                                | Цель прокси Vite        |
