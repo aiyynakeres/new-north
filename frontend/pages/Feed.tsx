@@ -16,12 +16,12 @@ const Feed: React.FC<Props> = ({ currentUser }) => {
 
 	useEffect(() => {
 		(async () => {
-			const list = await api.getArticles();
+			const list = (await api.getArticles()) ?? [];
 			list.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 			setArticles(list);
 			const [u, c] = await Promise.all([api.getUsers(), api.getCommunities()]);
-			setUsers(u);
-			setCommunities(c);
+			setUsers(u ?? []);
+			setCommunities(c ?? []);
 		})();
 	}, []);
 
