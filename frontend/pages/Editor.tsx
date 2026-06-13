@@ -42,7 +42,7 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
 	useEffect(() => {
 		(async () => {
 			const comms = await api.getCommunitiesForMember(currentUser.id);
-			setMyCommunities(comms);
+			setMyCommunities(comms ?? []);
 		})();
 	}, [currentUser.id]);
 
