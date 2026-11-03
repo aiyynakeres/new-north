@@ -1,9 +1,18 @@
 export interface User {
   id: string;
+  email: string;
+  password: string;
   telegramHandle: string;
+  nickname?: string;
   fullName: string;
   avatarUrl: string;
   bannerUrl: string;
+  country?: string;
+  city?: string;
+  shortBio?: string;
+  role?: string;
+  company?: string;
+  communityOffers?: string[];
   bio: string;
   tags: string[];
   joinedAt: string;

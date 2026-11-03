@@ -4,11 +4,32 @@ const USERS_KEY = 'new_north_users';
 const ARTICLES_KEY = 'new_north_articles';
 const SESSION_KEY = 'new_north_session';
 const AUTH_CODE = '123456';
+const DEMO_USER: User = {
+  id: 'u-demo',
+  email: 'demo@new-north.ru',
+  password: 'north2026',
+  telegramHandle: 'demo_north',
+  nickname: 'demo-member',
+  fullName: 'Тестовый участник',
+  avatarUrl: 'https://picsum.photos/200/200?random=12',
+  bannerUrl: 'https://picsum.photos/1200/400?random=12',
+  country: 'Россия',
+  city: 'Якутск',
+  shortBio: 'Тестовый профиль для знакомства с возможностями клуба New-North.',
+  role: 'Участник сообщества',
+  company: 'New-North',
+  communityOffers: ['coffee', 'startup'],
+  bio: 'Это демонстрационный профиль участника клуба. Используйте его, чтобы посмотреть ленту, профили, статьи и остальные возможности New-North без прохождения регистрации.',
+  tags: ['сообщество', 'стартапы', 'знакомства'],
+  joinedAt: new Date().toISOString(),
+};
 
 // Initial Mock Data
 const INITIAL_USERS: User[] = [
   {
     id: 'u1',
+    email: 'admin@new-north.ru',
+    password: 'password123',
     telegramHandle: 'admin_north',
     fullName: 'Ayaan North',
     avatarUrl: 'https://picsum.photos/200/200?random=1',
@@ -81,6 +102,18 @@ export const db = {
     return db.getUsers().find(u => u.telegramHandle === telegramHandle);
   },
 
+  getUserByEmail: (email: string): User | undefined => {
+    return db.getUsers().find(u => u.email?.toLowerCase() === email.toLowerCase());
+  },
+
+  verifyEmailPassword: (email: string, password: string): User | undefined => {
+    const user = db.getUserByEmail(email);
+    if (user && user.password === password) {
+      return user;
+    }
+    return undefined;
+  },
+
   isAuthCodeValid: (code: string): boolean => {
     return code === AUTH_CODE;
   },
@@ -146,9 +179,12 @@ export const db = {
   },
   
   init: () => {
-      if(!localStorage.getItem(USERS_KEY)) {
-          localStorage.setItem(USERS_KEY, JSON.stringify(INITIAL_USERS));
+      const storedUsers = localStorage.getItem(USERS_KEY);
+      const users: User[] = storedUsers ? JSON.parse(storedUsers) : INITIAL_USERS;
+      if (!users.some((user) => user.email?.toLowerCase() === DEMO_USER.email.toLowerCase())) {
+          users.push(DEMO_USER);
       }
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
       if(!localStorage.getItem(ARTICLES_KEY)) {
           localStorage.setItem(ARTICLES_KEY, JSON.stringify(INITIAL_ARTICLES));
       }

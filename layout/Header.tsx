@@ -53,7 +53,7 @@ const Header: React.FC<Props> = ({ user, onLogout }) => {
                 <Button variant="ghost">Вход</Button>
               </Link>
               <Link to="/register">
-                <Button variant="primary">Регистрация</Button>
+                <Button variant="primary">Вступить</Button>
               </Link>
             </div>
           )}
