@@ -13,8 +13,33 @@ type Props = {
 	users: UserType[];
 	currentUser: UserType | null;
 	onArticleUpdated?: (article: ArticleType) => void;
+	variant?: "default" | "feed";
 	/** если false — без строки автора (например, свои статьи в профиле) */
 	showAuthor?: boolean;
+};
+
+const getFeedDescription = (article: ArticleType) => {
+	const preview = article.preview.trim().replace(/\s*\.{3,}\s*$/, "");
+	const paragraphs =
+		article.blocks
+			?.filter((block) => block.type === "paragraph")
+			.map((block) => block.content.trim())
+			.filter(Boolean)
+			.join(" ") ?? "";
+
+	if (!paragraphs) return preview || article.content;
+	if (!preview) return paragraphs;
+
+	const normalizedPreview = preview.toLocaleLowerCase();
+	const normalizedParagraphs = paragraphs.toLocaleLowerCase();
+	if (
+		normalizedParagraphs.includes(normalizedPreview) ||
+		normalizedPreview.includes(normalizedParagraphs)
+	) {
+		return paragraphs.length >= preview.length ? paragraphs : preview;
+	}
+
+	return `${preview}. ${paragraphs}`;
 };
 
 const ArticleCard: React.FC<Props> = ({
@@ -24,60 +49,108 @@ const ArticleCard: React.FC<Props> = ({
 	users,
 	currentUser,
 	onArticleUpdated,
+	variant = "default",
 	showAuthor = true,
 }) => {
+	const isFeed = variant === "feed";
+	const primaryTopic = article.tags[0];
+	const description = isFeed ? getFeedDescription(article) : article.preview;
+	const feedMetadata = isFeed && (community || primaryTopic) && (
+		<div className="flex min-w-0 flex-wrap items-center gap-1.5">
+			{community && (
+				<CommunityPostBadge
+					communityId={community.id}
+					name={community.name}
+					imageUrl={community.coverUrl}
+				/>
+			)}
+			{primaryTopic && (
+				<span className="inline-flex min-h-8 items-center rounded-full border border-north-200 bg-north-50 px-3 py-1 text-xs font-medium text-north-600">
+					{primaryTopic}
+				</span>
+			)}
+		</div>
+	);
+
 	return (
-		<div className="bg-white rounded-xl border border-north-200 p-6 hover:shadow-md transition-shadow">
+		<article className="rounded-xl border border-north-200 bg-white p-5 transition-[border-color,box-shadow] duration-200 hover:border-north-300 hover:shadow-sm">
 			{showAuthor && author && (
-				<div className="flex items-center gap-3 mb-4">
-					<Link to={`/profile/${author.id}`} className="flex items-center gap-3">
+				<div className="mb-3 flex items-center gap-3">
+					<Link
+						to={`/profile/${author.id}`}
+						className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-north-500 focus-visible:ring-offset-2"
+					>
 						<img
 							src={author.avatarUrl}
 							alt={author.fullName}
-							className="w-10 h-10 rounded-full object-cover"
+							width={40}
+							height={40}
+							loading="lazy"
+							className="h-10 w-10 rounded-full object-cover"
 						/>
-						<div>
-							<p className="font-medium text-north-900">{author.fullName}</p>
-							<p className="text-xs text-north-500">
-								{new Date(article.createdAt).toLocaleDateString()}
-							</p>
-						</div>
 					</Link>
+					<div className="min-w-0 flex-1">
+						<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+							<Link
+								to={`/profile/${author.id}`}
+								className="rounded font-medium text-north-900 hover:text-north-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-north-500"
+							>
+								{author.fullName}
+							</Link>
+							{feedMetadata}
+						</div>
+						<p className="mt-0.5 text-xs text-north-500">
+							{new Date(article.createdAt).toLocaleDateString()}
+						</p>
+					</div>
 				</div>
 			)}
-			<Link to={`/article/${article.id}`}>
-				<h2 className="font-serif text-2xl font-bold text-north-800 mb-2 hover:text-north-600 transition-colors">
+			{isFeed && (!showAuthor || !author) && feedMetadata && (
+				<div className="mb-3">{feedMetadata}</div>
+			)}
+			<Link
+				to={`/article/${article.id}`}
+				className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-north-500 focus-visible:ring-offset-4"
+			>
+				<h2 className="mb-1.5 font-serif text-xl font-bold text-north-800 transition-colors hover:text-north-600 sm:text-2xl">
 					{article.title}
 				</h2>
-				<p className="text-north-600 leading-relaxed mb-4">{article.preview}</p>
+				<p className={`leading-6 text-north-600 ${isFeed ? "line-clamp-2" : "mb-4"}`}>
+					{description}
+				</p>
 			</Link>
 
-			<div className="flex flex-wrap items-center gap-2 mb-3">
-				{community && <CommunityPostBadge communityId={community.id} name={community.name} />}
-				{article.tags.map((tag) => (
-					<Tag key={tag}>{tag}</Tag>
-				))}
-			</div>
+			{!isFeed && (community || primaryTopic) && (
+				<div className="mb-4 flex flex-wrap items-center gap-2">
+					{community && <CommunityPostBadge communityId={community.id} name={community.name} />}
+					{article.tags.map((tag) => (
+						<Tag key={tag}>{tag}</Tag>
+					))}
+				</div>
+			)}
 
-			<div className="mb-4">
-				<ArticleReactionsControl
-					article={article}
-					users={users}
-					currentUser={currentUser}
-					onUpdated={(a) => onArticleUpdated?.(a)}
-					richHover={false}
-				/>
+			<div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+				<div className="min-w-0">
+					<ArticleReactionsControl
+						article={article}
+						users={users}
+						currentUser={isFeed ? null : currentUser}
+						onUpdated={isFeed ? undefined : (updated) => onArticleUpdated?.(updated)}
+						richHover={false}
+					/>
+				</div>
+				<div className="ml-auto flex items-center gap-4 text-sm text-north-400">
+					<span className="flex items-center gap-1">
+						<span className="sr-only">Просмотры:</span>
+						<Eye size={16} aria-hidden="true" /> {article.views}
+					</span>
+					<span className="flex items-center gap-1">
+						<span className="sr-only">Комментарии:</span>
+						<MessageSquare size={16} aria-hidden="true" /> {article.commentsCount}
+					</span>
+				</div>
 			</div>
-
-			<div className="flex items-center justify-end gap-4 text-north-400 text-sm pt-1 border-t border-north-100">
-				<span className="flex items-center gap-1">
-					<Eye size={16} /> {article.views}
-				</span>
-				<span className="flex items-center gap-1">
-					<MessageSquare size={16} /> {article.commentsCount}
-				</span>
-			</div>
-		</div>
+		</article>
 	);
 };
 

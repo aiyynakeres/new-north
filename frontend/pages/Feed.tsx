@@ -31,7 +31,7 @@ const Feed: React.FC<Props> = ({ currentUser }) => {
 	return (
 		<div className="max-w-6xl mx-auto px-4 py-8">
 			<div className="flex flex-col md:flex-row gap-8 md:gap-10 items-start">
-				<main className="min-w-0 flex-1 w-full space-y-6">
+				<main className="min-w-0 w-full flex-1 space-y-4">
 					{articles.map((article) => {
 						const author = getAuthor(article.authorId);
 						const comm = getCommunity(article.communityId);
@@ -43,9 +43,7 @@ const Feed: React.FC<Props> = ({ currentUser }) => {
 								community={comm}
 								users={users}
 								currentUser={currentUser}
-								onArticleUpdated={(a) =>
-									setArticles((prev) => prev.map((x) => (x.id === a.id ? a : x)))
-								}
+								variant="feed"
 							/>
 						);
 					})}

@@ -1,4 +1,11 @@
-import { BriefcaseBusiness, Camera, HeartHandshake, MessageCircle, UserRound } from "lucide-react";
+import {
+	BriefcaseBusiness,
+	Camera,
+	Check,
+	HeartHandshake,
+	MessageCircle,
+	UserRound,
+} from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -21,12 +28,18 @@ type RegistrationForm = {
 	bio: string;
 	occupation: string;
 	company: string;
-	aboutClub: string;
 	clubOffers: string[];
 	tags: string[];
 };
 
-const OFFER_OPTIONS = ["Могу менторить", "Попить кофе", "Обсудить стартап"];
+const OFFER_OPTIONS = [
+	"Открыт к общению",
+	"Готов выпить кофе",
+	"Могу показать офис",
+	"Готов помочь советом",
+	"Хочу дружить",
+	"Ищу работу",
+];
 
 const Section = ({
 	id,
@@ -95,7 +108,6 @@ const Register: React.FC<Props> = ({ onLogin }) => {
 		bio: "",
 		occupation: "",
 		company: "",
-		aboutClub: "",
 		clubOffers: [],
 		tags: [],
 	});
@@ -160,7 +172,7 @@ const Register: React.FC<Props> = ({ onLogin }) => {
 				bio: formData.bio.trim(),
 				occupation: formData.occupation.trim(),
 				company: formData.company.trim(),
-				aboutClub: formData.aboutClub.trim(),
+				aboutClub: "",
 				clubOffers: formData.clubOffers,
 				tags: formData.tags,
 			});
@@ -411,20 +423,19 @@ const Register: React.FC<Props> = ({ onLogin }) => {
 									</Section>
 								</div>
 
-								<Section id="club" icon={<HeartHandshake size={20} />} title="Для клуба">
-									<TextAreaField
-										id="about-club"
-										label="Расскажите клубу о себе"
-										maxLength={800}
-										value={formData.aboutClub}
-										onChange={(value) => updateForm("aboutClub", value)}
-										placeholder="Чем занимаетесь сейчас и о чём мечтаете?"
-									/>
-									<fieldset className="mt-5">
-										<legend className="text-sm font-medium text-north-700">
-											Для клуба и людей я могу
+								<Section
+									id="club"
+									icon={<HeartHandshake size={20} />}
+									title="Для других членов клуба я…"
+								>
+									<fieldset aria-describedby="club-hint">
+										<legend className="sr-only">
+											Что вы готовы предложить другим членам клуба
 										</legend>
-										<div className="mt-3 flex flex-wrap gap-2">
+										<p id="club-hint" className="mb-4 text-center text-sm text-north-500">
+											Выберите всё, что вам подходит
+										</p>
+										<div className="mx-auto flex max-w-xl flex-wrap justify-center gap-2.5">
 											{OFFER_OPTIONS.map((offer) => {
 												const selected = formData.clubOffers.includes(offer);
 												return (
@@ -433,8 +444,9 @@ const Register: React.FC<Props> = ({ onLogin }) => {
 														type="button"
 														aria-pressed={selected}
 														onClick={() => toggleOffer(offer)}
-														className={`min-h-11 rounded-full border px-4 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-north-500 ${selected ? "border-north-800 bg-north-800 text-white" : "border-north-200 text-north-700 hover:border-north-400"}`}
+														className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-north-500 focus-visible:ring-offset-2 ${selected ? "border-north-800 bg-north-800 text-white shadow-sm" : "border-north-200 bg-white text-north-700 hover:border-north-400 hover:bg-north-50"}`}
 													>
+														{selected && <Check size={16} strokeWidth={2.5} aria-hidden="true" />}
 														{offer}
 													</button>
 												);
