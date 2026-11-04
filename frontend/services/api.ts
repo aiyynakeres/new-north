@@ -1,10 +1,4 @@
-import type {
-	Article,
-	Community,
-	LeaderboardEntry,
-	RegisterInput,
-	User,
-} from "../types";
+import type { Article, Community, LeaderboardEntry, RegisterInput, User } from "../types";
 import { mockApi } from "./mockApi";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
@@ -104,7 +98,10 @@ const httpApi = {
 
 	getCommunityById: (id: string) => request<Community>(`/communities/${id}`),
 
-	createCommunity: (data: { name: string; description: string; aboutShort?: string }, _creator?: User) =>
+	createCommunity: (
+		data: { name: string; description: string; aboutShort?: string },
+		_creator?: User,
+	) =>
 		request<Community>("/communities", {
 			method: "POST",
 			body: JSON.stringify(data),

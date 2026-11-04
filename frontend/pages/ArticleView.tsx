@@ -7,7 +7,7 @@ import Button from "../components/ui/Button";
 import CommunityPostBadge from "../components/ui/CommunityPostBadge";
 import Tag from "../components/ui/Tag";
 import { api } from "../services/api";
-import type { Article as ArticleType, Comment, Community, User as UserType } from "../types";
+import type { Article as ArticleType, Community, User as UserType } from "../types";
 
 type Props = {
 	currentUser: UserType | null;

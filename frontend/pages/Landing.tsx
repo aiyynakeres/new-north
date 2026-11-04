@@ -13,11 +13,14 @@ const Landing: React.FC = () => (
 				Делиться и вдохновлять
 			</p>
 			<p className="mt-6 max-w-4xl text-base font-medium leading-relaxed text-north-700 sm:text-lg md:mt-8 md:text-xl md:leading-8">
-				Ламповое сообщество неравнодушных жителей Якутии. Здесь можно находить
-				единомышленников, делиться своим опытом и изучать полезный контент. Чтобы общение
-				было комфортным, участники указывают актуальную и проверенную информацию о себе.
+				Ламповое сообщество неравнодушных жителей Якутии. Здесь можно находить единомышленников,
+				делиться своим опытом и изучать полезный контент. Чтобы общение было комфортным, участники
+				указывают актуальную и проверенную информацию о себе.
 			</p>
-			<Link to="/register" className="mt-10 rounded-xl focus:outline-none focus-visible:ring-4 focus-visible:ring-white/80 md:mt-12">
+			<Link
+				to="/register"
+				className="mt-10 rounded-xl focus:outline-none focus-visible:ring-4 focus-visible:ring-white/80 md:mt-12"
+			>
 				<Button className="min-h-14 rounded-xl px-10 py-4 text-lg shadow-lg hover:shadow-xl md:min-h-16 md:px-12 md:text-xl">
 					Вступить
 				</Button>
