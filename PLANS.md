@@ -136,7 +136,7 @@ There are currently no tests and no CI pipeline.
 ### Shared
 
 - Pushes to `main` deploy Production; pushes to the `preview` branch deploy
-  Preview. Both projects are Git-connected.
+  Preview. Merge `main` into `preview` to keep staging current.
 - The pretty preview aliases are pinned to a deployment; re-point them after a
   preview deployment, or use the stable branch aliases above.
 - Do not create separate Vercel projects per environment. Use the built-in
