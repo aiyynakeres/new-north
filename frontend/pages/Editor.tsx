@@ -347,7 +347,6 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
 										e.target.style.height = `${e.target.scrollHeight}px`;
 									}}
 									ref={(ref) => {
-										if (ref && !block.content) ref.focus();
 										if (ref) {
 											ref.style.height = "auto";
 											ref.style.height = `${ref.scrollHeight}px`;
