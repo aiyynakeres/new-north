@@ -146,7 +146,7 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
 
 	const toggleFollow = async () => {
 		if (!currentUser || !user || currentUser.id === user.id) return;
-		if (await api.isFollowingUser(currentUser.id, user.id)) {
+		if (isFollowing) {
 			await api.unfollowUser(currentUser.id, user.id);
 			setIsFollowing(false);
 		} else {
