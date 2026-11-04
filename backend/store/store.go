@@ -158,9 +158,9 @@ func (s *Store) CreateUser(input models.RegisterInput) *models.User {
 	now := time.Now().UTC().Format(time.RFC3339)
 	avatarURL := input.AvatarURL
 	if avatarURL == "" {
-		avatarURL = "https://picsum.photos/200/200?grayscale"
+		avatarURL = "/mocks/avatar-placeholder.jpg"
 	}
-	bannerURL := "https://picsum.photos/1200/400?grayscale"
+	bannerURL := "/mocks/cover-placeholder.jpg"
 	_, err := s.db.Pool.Exec(ctx,
 		`INSERT INTO users (id, telegram_handle, nickname, full_name, avatar_url, banner_url, country, city, bio, occupation, company, about_club, club_offers, tags, joined_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
@@ -456,7 +456,7 @@ func (s *Store) CreateCommunity(input models.CreateCommunityInput, creatorID str
 		Name:           strings.TrimSpace(input.Name),
 		AboutShort:     strings.TrimSpace(input.AboutShort),
 		Description:    strings.TrimSpace(input.Description),
-		CoverURL:       "https://picsum.photos/800/200?grayscale",
+		CoverURL:       "/mocks/community-placeholder.jpg",
 		CreatorID:      creatorID,
 		AdminIDs:       []string{creatorID},
 		MemberIDs:      []string{creatorID},

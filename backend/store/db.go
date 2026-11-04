@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -31,16 +32,29 @@ func NewDB(ctx context.Context, databaseURL string) (*DB, error) {
 }
 
 func (db *DB) Migrate(ctx context.Context) error {
-	sql, err := migrations.ReadFile("migrations/001_init.sql")
+	entries, err := migrations.ReadDir("migrations")
 	if err != nil {
-		return fmt.Errorf("unable to read migration: %w", err)
+		return fmt.Errorf("unable to read migrations: %w", err)
 	}
 
-	if _, err := db.Pool.Exec(ctx, string(sql)); err != nil {
-		return fmt.Errorf("unable to run migration: %w", err)
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
+			continue
+		}
+
+		sql, err := migrations.ReadFile("migrations/" + entry.Name())
+		if err != nil {
+			return fmt.Errorf("unable to read migration %s: %w", entry.Name(), err)
+		}
+
+		if _, err := db.Pool.Exec(ctx, string(sql)); err != nil {
+			return fmt.Errorf("unable to run migration %s: %w", entry.Name(), err)
+		}
+
+		log.Printf("Applied migration %s", entry.Name())
 	}
 
-	log.Println("Database migration completed")
+	log.Println("Database migrations completed")
 	return nil
 }
 
