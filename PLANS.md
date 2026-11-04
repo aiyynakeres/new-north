@@ -33,7 +33,26 @@ The current flow accepts the fixed code `123456` for any known handle
 (`backend/store/store.go`), and sessions are predictable, non-expiring
 `sess_<UnixNano>_<userID>` tokens.
 
-- Integrate a Telegram bot to deliver one-time codes.
+**Auth architecture:** keep the Telegram bot inside the Go monolith as a
+webhook handler — no separate service and no long polling. Telegram posts updates
+to `POST /api/telegram/webhook`; the handler verifies
+`X-Telegram-Bot-Api-Secret-Token`, dedupes by `update_id`, and responds `200`
+quickly.
+
+- `POST /api/auth/request-code` creates a short-lived login token and returns
+  `https://t.me/<bot>?start=<token>`.
+- The bot handles `/start <token>` and links the Telegram user to the pending
+  login.
+- The frontend polls `GET /api/auth/status/<token>` until approved, then receives
+  a session.
+- Store pending logins and Telegram identities in PostgreSQL/Neon.
+- Env: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`.
+- Alternative: Telegram Login Widget — the frontend receives signed user data
+  and the Go backend verifies the HMAC; no webhook or polling needed.
+
+Long polling does not fit Vercel; use webhooks, or a separate worker
+(Railway/Fly/VPS) only if polling or high-volume broadcasting is required.
+
 - Store codes with expiry (e.g. 5 minutes), attempt limits, and single use.
 - Generate cryptographically random session tokens.
 - Add token expiry, logout, and (optionally) refresh.
