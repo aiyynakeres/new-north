@@ -28,3 +28,5 @@ yarn-error.log*
 # artifacts at any level
 node_modules/
 dist/
+.vercel
+.env*

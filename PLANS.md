@@ -100,6 +100,20 @@ There are currently no tests and no CI pipeline.
 - Basic analytics for posts and communities.
 - Moderation log for community admins.
 
+## Deployment
+
+- **Frontend:** https://new-north.vercel.app — Vercel project `new-north-frontend`,
+  root directory `frontend`.
+- **Backend:** https://new-north-api.vercel.app — Vercel project `new-north-backend`,
+  root directory `backend`.
+- **Database:** Neon Postgres provisioned through the Vercel Marketplace
+  (`DATABASE_URL` is set on the backend project).
+- **API routing:** the frontend rewrites `/api/*` to the backend via
+  `frontend/vercel.json`, so browser requests are same-origin and CORS is not
+  required. `FRONTEND_URL` is also set on the backend for direct calls.
+- **Protection:** backend deployment protection is disabled; the frontend keeps
+  Vercel Authentication for non-production domains (previews).
+
 ## Known limitations
 
 - Only the author, members, admins, and creator can read `community_only` posts;
