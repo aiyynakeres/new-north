@@ -90,6 +90,19 @@ There are no automated tests yet. See PLANS.md for the testing/CI roadmap.
   schema/data changes; existing seed rows use `ON CONFLICT DO NOTHING`.
 - Do not commit `node_modules/`, `dist/`, `.vite/`, or local `.env.local` files.
 
+## Deployment
+
+- **Production:** https://new-north.vercel.app (frontend) and
+  https://new-north-api.vercel.app (backend), separate Neon DB.
+- **Development:** https://new-north-dev.vercel.app (frontend) and
+  https://new-north-backend-dev.vercel.app (backend), separate Neon DB.
+- `ALLOW_DEV_AUTH=true` only on the dev backend; production leaves it unset and
+  rejects `/auth/*` with `503` until real auth ships.
+- The production frontend uses the `/api` rewrite from `frontend/vercel.json`.
+  The dev frontend uses an absolute `VITE_API_BASE_URL` instead, because the
+  rewrite target is production-specific.
+- Pushes to `main` deploy all four projects via Git integration.
+
 ## Verification before finishing
 
 For frontend changes:

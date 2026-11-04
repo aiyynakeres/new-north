@@ -102,17 +102,44 @@ There are currently no tests and no CI pipeline.
 
 ## Deployment
 
-- **Frontend:** https://new-north.vercel.app — Vercel project `new-north-frontend`,
+### Production
+
+- **Frontend:** https://new-north.vercel.app — project `new-north-frontend`,
   root directory `frontend`.
-- **Backend:** https://new-north-api.vercel.app — Vercel project `new-north-backend`,
+- **Backend:** https://new-north-api.vercel.app — project `new-north-backend`,
   root directory `backend`.
-- **Database:** Neon Postgres provisioned through the Vercel Marketplace
-  (`DATABASE_URL` is set on the backend project).
+- **Database:** Neon Postgres (`new-north-db`) provisioned through the Vercel Marketplace.
+- **Auth:** `ALLOW_DEV_AUTH` is unset, so `/api/auth/*` returns `503` and no new
+  sessions can be created. Existing sessions were cleared. Production is
+  read-only until real Telegram auth ships.
 - **API routing:** the frontend rewrites `/api/*` to the backend via
-  `frontend/vercel.json`, so browser requests are same-origin and CORS is not
-  required. `FRONTEND_URL` is also set on the backend for direct calls.
-- **Protection:** backend deployment protection is disabled; the frontend keeps
-  Vercel Authentication for non-production domains (previews).
+  `frontend/vercel.json`, so browser requests are same-origin.
+
+### Development
+
+- **Frontend:** https://new-north-dev.vercel.app — project `new-north-dev`,
+  root directory `frontend`.
+- **Backend:** https://new-north-backend-dev.vercel.app — project
+  `new-north-backend-dev`, root directory `backend`.
+- **Database:** separate Neon Postgres (`new-north-db-dev`); dev data never
+  touches production.
+- **Auth:** `ALLOW_DEV_AUTH=true`; sign in with `admin_north` or `lena_dev` and
+  code `123456`. Registration is enabled.
+- **API routing:** `VITE_API_BASE_URL=https://new-north-backend-dev.vercel.app/api`;
+  the dev backend allows `https://new-north-dev.vercel.app` via `FRONTEND_URL`
+  (comma-separated origins are supported).
+- **Protection:** previews use Vercel Authentication. The `*.vercel.app`
+  production domains remain reachable, so the dev environment is not private —
+  it contains test data only.
+
+### Shared
+
+- Pushes to `main` deploy all four Vercel projects (both environments are
+  Git-connected).
+- Backend deployment protection is disabled for both backends so the frontends
+  can reach the APIs.
+- Production frontend authentication is disabled at the app level until real
+  auth is implemented; do not put real data behind it yet.
 
 ## Known limitations
 
@@ -125,6 +152,10 @@ There are currently no tests and no CI pipeline.
 - Mock mode persists data in `localStorage` under `new-north:mock:v3:`; bumping the
   version resets local mock data.
 - Seed IDs and data are intended for development/testing only.
+- Production login/registration return `503` until real Telegram auth is
+  implemented; the production site is read-only.
+- The dev environment uses the shared code `123456` and must not contain real data.
+- Development and production use separate Neon databases and Vercel projects.
 
 ## Local testing checklist
 
@@ -151,6 +182,14 @@ Run against the real backend:
 docker compose up -d db backend
 cd frontend
 VITE_USE_MOCKS=false pnpm dev
+```
+
+Docker Compose sets `ALLOW_DEV_AUTH=true`. If you run the backend directly,
+export it yourself:
+
+```sh
+cd backend
+ALLOW_DEV_AUTH=true go run .
 ```
 
 Backend checks:
