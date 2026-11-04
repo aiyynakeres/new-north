@@ -24,3 +24,7 @@ yarn-error.log*
 
 # vite dep-optimizer cache (machine-specific)
 .vite
+
+# artifacts at any level
+node_modules/
+dist/
