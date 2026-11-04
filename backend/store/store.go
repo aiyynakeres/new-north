@@ -64,7 +64,7 @@ func (s *Store) GetUserByToken(token string) *models.User {
 
 func (s *Store) GetUsers() []*models.User {
 	ctx := context.Background()
-	rows, err := s.db.Pool.Query(ctx, "SELECT id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at::text FROM users ORDER BY joined_at DESC")
+	rows, err := s.db.Pool.Query(ctx, "SELECT id, telegram_handle, nickname, full_name, avatar_url, banner_url, country, city, bio, occupation, company, about_club, club_offers, tags, joined_at::text FROM users ORDER BY joined_at DESC")
 	if err != nil {
 		return []*models.User{}
 	}
@@ -85,7 +85,7 @@ func (s *Store) GetUsers() []*models.User {
 
 func (s *Store) GetUserByID(id string) *models.User {
 	ctx := context.Background()
-	rows, err := s.db.Pool.Query(ctx, "SELECT id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at::text FROM users WHERE id = $1", id)
+	rows, err := s.db.Pool.Query(ctx, "SELECT id, telegram_handle, nickname, full_name, avatar_url, banner_url, country, city, bio, occupation, company, about_club, club_offers, tags, joined_at::text FROM users WHERE id = $1", id)
 	if err != nil {
 		return nil
 	}
@@ -99,7 +99,21 @@ func (s *Store) GetUserByID(id string) *models.User {
 
 func (s *Store) GetUserByTelegramHandle(handle string) *models.User {
 	ctx := context.Background()
-	rows, err := s.db.Pool.Query(ctx, "SELECT id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at::text FROM users WHERE telegram_handle = $1", handle)
+	rows, err := s.db.Pool.Query(ctx, "SELECT id, telegram_handle, nickname, full_name, avatar_url, banner_url, country, city, bio, occupation, company, about_club, club_offers, tags, joined_at::text FROM users WHERE telegram_handle = $1", handle)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		return scanUser(rows)
+	}
+	return nil
+}
+
+func (s *Store) GetUserByNickname(nickname string) *models.User {
+	ctx := context.Background()
+	rows, err := s.db.Pool.Query(ctx, "SELECT id, telegram_handle, nickname, full_name, avatar_url, banner_url, country, city, bio, occupation, company, about_club, club_offers, tags, joined_at::text FROM users WHERE LOWER(nickname) = LOWER($1)", nickname)
 	if err != nil {
 		return nil
 	}
@@ -114,40 +128,63 @@ func (s *Store) GetUserByTelegramHandle(handle string) *models.User {
 func (s *Store) SaveUser(user *models.User) {
 	ctx := context.Background()
 	_, err := s.db.Pool.Exec(ctx,
-		`INSERT INTO users (id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`INSERT INTO users (id, telegram_handle, nickname, full_name, avatar_url, banner_url, country, city, bio, occupation, company, about_club, club_offers, tags, joined_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		 ON CONFLICT (id) DO UPDATE SET
 		 telegram_handle = EXCLUDED.telegram_handle,
+		 nickname = EXCLUDED.nickname,
 		 full_name = EXCLUDED.full_name,
 		 avatar_url = EXCLUDED.avatar_url,
 		 banner_url = EXCLUDED.banner_url,
+		 country = EXCLUDED.country,
+		 city = EXCLUDED.city,
 		 bio = EXCLUDED.bio,
+		 occupation = EXCLUDED.occupation,
+		 company = EXCLUDED.company,
+		 about_club = EXCLUDED.about_club,
+		 club_offers = EXCLUDED.club_offers,
 		 tags = EXCLUDED.tags`,
-		user.ID, user.TelegramHandle, user.FullName, user.AvatarURL, user.BannerURL, user.Bio, user.Tags, user.JoinedAt)
+		user.ID, user.TelegramHandle, user.Nickname, user.FullName, user.AvatarURL, user.BannerURL,
+		user.Country, user.City, user.Bio, user.Occupation, user.Company, user.AboutClub,
+		user.ClubOffers, user.Tags, user.JoinedAt)
 	if err != nil {
 		return
 	}
 }
 
-func (s *Store) CreateUser(handle, fullName, bio string, tags []string) *models.User {
+func (s *Store) CreateUser(input models.RegisterInput) *models.User {
 	ctx := context.Background()
 	id := "u" + fmt.Sprintf("%d", time.Now().UnixNano())
 	now := time.Now().UTC().Format(time.RFC3339)
+	avatarURL := input.AvatarURL
+	if avatarURL == "" {
+		avatarURL = "https://picsum.photos/200/200?grayscale"
+	}
+	bannerURL := "https://picsum.photos/1200/400?grayscale"
 	_, err := s.db.Pool.Exec(ctx,
-		`INSERT INTO users (id, telegram_handle, full_name, avatar_url, banner_url, bio, tags, joined_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		id, handle, fullName, "https://picsum.photos/200/200?grayscale", "https://picsum.photos/1200/400?grayscale", bio, tags, now)
+		`INSERT INTO users (id, telegram_handle, nickname, full_name, avatar_url, banner_url, country, city, bio, occupation, company, about_club, club_offers, tags, joined_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+		id, input.TelegramHandle, input.Nickname, input.FullName, avatarURL, bannerURL,
+		input.Country, input.City, input.Bio, input.Occupation, input.Company, input.AboutClub,
+		input.ClubOffers, input.Tags, now)
 	if err != nil {
 		return nil
 	}
 	return &models.User{
 		ID:             id,
-		TelegramHandle: handle,
-		FullName:       fullName,
-		AvatarURL:      "https://picsum.photos/200/200?grayscale",
-		BannerURL:      "https://picsum.photos/1200/400?grayscale",
-		Bio:            bio,
-		Tags:           tags,
+		TelegramHandle: input.TelegramHandle,
+		Nickname:       input.Nickname,
+		FullName:       input.FullName,
+		AvatarURL:      avatarURL,
+		BannerURL:      bannerURL,
+		Country:        input.Country,
+		City:           input.City,
+		Bio:            input.Bio,
+		Occupation:     input.Occupation,
+		Company:        input.Company,
+		AboutClub:      input.AboutClub,
+		ClubOffers:     input.ClubOffers,
+		Tags:           input.Tags,
 		JoinedAt:       now,
 	}
 }
@@ -587,7 +624,7 @@ func (s *Store) GetFollowing(followerID string) []string {
 func (s *Store) GetAuthorsLeaderboard() []models.LeaderboardEntry {
 	ctx := context.Background()
 	rows, err := s.db.Pool.Query(ctx,
-		`SELECT u.id, u.telegram_handle, u.full_name, u.avatar_url, u.banner_url, u.bio, u.tags, u.joined_at,
+		`SELECT u.id, u.telegram_handle, u.nickname, u.full_name, u.avatar_url, u.banner_url, u.country, u.city, u.bio, u.occupation, u.company, u.about_club, u.club_offers, u.tags, u.joined_at,
 		        COUNT(a.id) AS article_count
 		 FROM users u
 		 LEFT JOIN articles a ON a.author_id = u.id
@@ -602,7 +639,9 @@ func (s *Store) GetAuthorsLeaderboard() []models.LeaderboardEntry {
 	for rows.Next() {
 		var u models.User
 		var count int
-		rows.Scan(&u.ID, &u.TelegramHandle, &u.FullName, &u.AvatarURL, &u.BannerURL, &u.Bio, &u.Tags, &u.JoinedAt, &count)
+		rows.Scan(&u.ID, &u.TelegramHandle, &u.Nickname, &u.FullName, &u.AvatarURL, &u.BannerURL,
+			&u.Country, &u.City, &u.Bio, &u.Occupation, &u.Company, &u.AboutClub, &u.ClubOffers,
+			&u.Tags, &u.JoinedAt, &count)
 		entries = append(entries, models.LeaderboardEntry{User: u, ArticleCount: count})
 	}
 	return entries
@@ -665,7 +704,9 @@ func (s *Store) Seed(ctx context.Context) error {
 
 func scanUser(row pgx.Row) *models.User {
 	var u models.User
-	err := row.Scan(&u.ID, &u.TelegramHandle, &u.FullName, &u.AvatarURL, &u.BannerURL, &u.Bio, &u.Tags, &u.JoinedAt)
+	err := row.Scan(&u.ID, &u.TelegramHandle, &u.Nickname, &u.FullName, &u.AvatarURL, &u.BannerURL,
+		&u.Country, &u.City, &u.Bio, &u.Occupation, &u.Company, &u.AboutClub, &u.ClubOffers,
+		&u.Tags, &u.JoinedAt)
 	if err != nil {
 		return nil
 	}

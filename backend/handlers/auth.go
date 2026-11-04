@@ -39,21 +39,28 @@ func (h *AuthHandler) VerifyCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		TelegramHandle string   `json:"telegramHandle"`
-		FullName       string   `json:"fullName"`
-		Bio            string   `json:"bio"`
-		Tags           []string `json:"tags"`
-	}
+	var req models.RegisterInput
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
+		return
+	}
+	if req.Nickname == "" || req.FullName == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "nickname and full name are required"})
 		return
 	}
 	if h.Store.GetUserByTelegramHandle(req.TelegramHandle) != nil {
 		writeJSON(w, http.StatusConflict, map[string]string{"error": "user already exists"})
 		return
 	}
-	user := h.Store.CreateUser(req.TelegramHandle, req.FullName, req.Bio, req.Tags)
+	if h.Store.GetUserByNickname(req.Nickname) != nil {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "nickname already exists"})
+		return
+	}
+	user := h.Store.CreateUser(req)
+	if user == nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create user"})
+		return
+	}
 	token := h.Store.CreateSession(user.ID)
 	writeJSON(w, http.StatusCreated, models.LoginResponse{User: *user, Token: token})
 }

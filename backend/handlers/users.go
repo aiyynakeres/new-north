@@ -51,8 +51,29 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if input.FullName != nil {
 		user.FullName = *input.FullName
 	}
+	if input.Nickname != nil {
+		user.Nickname = *input.Nickname
+	}
 	if input.Bio != nil {
 		user.Bio = *input.Bio
+	}
+	if input.Country != nil {
+		user.Country = *input.Country
+	}
+	if input.City != nil {
+		user.City = *input.City
+	}
+	if input.Occupation != nil {
+		user.Occupation = *input.Occupation
+	}
+	if input.Company != nil {
+		user.Company = *input.Company
+	}
+	if input.AboutClub != nil {
+		user.AboutClub = *input.AboutClub
+	}
+	if input.ClubOffers != nil {
+		user.ClubOffers = *input.ClubOffers
 	}
 	if input.Tags != nil {
 		user.Tags = *input.Tags

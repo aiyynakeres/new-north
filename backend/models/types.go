@@ -5,10 +5,17 @@ import "time"
 type User struct {
 	ID              string   `json:"id"`
 	TelegramHandle  string   `json:"telegramHandle"`
+	Nickname        string   `json:"nickname"`
 	FullName        string   `json:"fullName"`
 	AvatarURL       string   `json:"avatarUrl"`
 	BannerURL       string   `json:"bannerUrl"`
+	Country         string   `json:"country"`
+	City            string   `json:"city"`
 	Bio             string   `json:"bio"`
+	Occupation      string   `json:"occupation"`
+	Company         string   `json:"company"`
+	AboutClub       string   `json:"aboutClub"`
+	ClubOffers      []string `json:"clubOffers"`
 	Tags            []string `json:"tags"`
 	JoinedAt        string   `json:"joinedAt"`
 }
@@ -86,6 +93,21 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
+type RegisterInput struct {
+	TelegramHandle string   `json:"telegramHandle"`
+	Nickname       string   `json:"nickname"`
+	FullName       string   `json:"fullName"`
+	AvatarURL      string   `json:"avatarUrl"`
+	Country        string   `json:"country"`
+	City           string   `json:"city"`
+	Bio            string   `json:"bio"`
+	Occupation     string   `json:"occupation"`
+	Company        string   `json:"company"`
+	AboutClub      string   `json:"aboutClub"`
+	ClubOffers     []string `json:"clubOffers"`
+	Tags           []string `json:"tags"`
+}
+
 type CreateCommunityInput struct {
 	Name        string `json:"name"`
 	AboutShort  string `json:"aboutShort"`
@@ -111,7 +133,14 @@ type UpdateArticleInput struct {
 
 type UpdateProfileInput struct {
 	FullName       *string   `json:"fullName,omitempty"`
+	Nickname       *string   `json:"nickname,omitempty"`
 	Bio            *string   `json:"bio,omitempty"`
+	Country        *string   `json:"country,omitempty"`
+	City           *string   `json:"city,omitempty"`
+	Occupation     *string   `json:"occupation,omitempty"`
+	Company        *string   `json:"company,omitempty"`
+	AboutClub      *string   `json:"aboutClub,omitempty"`
+	ClubOffers     *[]string `json:"clubOffers,omitempty"`
 	Tags           *[]string `json:"tags,omitempty"`
 	AvatarURL      *string   `json:"avatarUrl,omitempty"`
 	BannerURL      *string   `json:"bannerUrl,omitempty"`

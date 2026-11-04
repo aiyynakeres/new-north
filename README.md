@@ -38,7 +38,26 @@ new-north/
 
 ## Разработка
 
-Бэкенд и БД запускаются в Docker, фронтенд — локально (hot reload).
+### Только фронтенд — без backend и БД
+
+В dev-режиме фронтенд по умолчанию использует локальные моки. Данные сохраняются в `localStorage`, поэтому можно создавать статьи и сообщества, комментировать и ставить реакции.
+
+```sh
+cd frontend
+pnpm install
+pnpm dev
+```
+
+Откройте `http://localhost:3000`. Для тестового входа используйте:
+
+- Telegram: `admin_north` или `lena_dev`
+- Код: `123456`
+
+Чтобы сбросить изменения и вернуть начальные данные, очистите Local Storage для `localhost:3000` в DevTools.
+
+### С настоящим backend
+
+Бэкенд и БД запускаются в Docker, фронтенд — локально (hot reload). Отключите моки через переменную окружения:
 
 ```sh
 # 1. Запустить БД и бэкенд
@@ -47,7 +66,7 @@ docker compose up -d db backend
 # 2. Запустить фронтенд локально
 cd frontend
 pnpm install
-pnpm dev
+VITE_USE_MOCKS=false pnpm dev
 ```
 
 - **Фронтенд** — `http://localhost:3000` (Vite, HMR)
@@ -110,3 +129,4 @@ docker compose up -d backend
 | `FRONTEND_URL`          | —                                                                     | CORS origin             |
 | `VITE_API_BASE_URL`     | `/api`                                                                | Базовый путь API для фронтенда |
 | `VITE_API_PROXY_TARGET` | `http://localhost:8080`                                                | Цель прокси Vite        |
+| `VITE_USE_MOCKS`        | `true` в dev                                                           | Локальные данные без backend и БД |

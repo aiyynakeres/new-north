@@ -1,10 +1,17 @@
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     telegram_handle TEXT UNIQUE NOT NULL,
+    nickname TEXT NOT NULL DEFAULT '',
     full_name TEXT NOT NULL,
     avatar_url TEXT NOT NULL DEFAULT '',
     banner_url TEXT NOT NULL DEFAULT '',
+    country TEXT NOT NULL DEFAULT '',
+    city TEXT NOT NULL DEFAULT '',
     bio TEXT NOT NULL DEFAULT '',
+    occupation TEXT NOT NULL DEFAULT '',
+    company TEXT NOT NULL DEFAULT '',
+    about_club TEXT NOT NULL DEFAULT '',
+    club_offers TEXT[] NOT NULL DEFAULT '{}',
     tags TEXT[] NOT NULL DEFAULT '{}',
     joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -72,3 +79,11 @@ CREATE INDEX IF NOT EXISTS idx_articles_created_at ON articles(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_comments_article_id ON comments(article_id);
 CREATE INDEX IF NOT EXISTS idx_article_reactions_article_id ON article_reactions(article_id);
 CREATE INDEX IF NOT EXISTS idx_follows_target_id ON follows(target_id);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS city TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS occupation TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS company TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS about_club TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS club_offers TEXT[] NOT NULL DEFAULT '{}';
