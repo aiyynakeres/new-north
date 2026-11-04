@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"new-north-backend/handlers"
 	"new-north-backend/middleware"
@@ -42,7 +43,10 @@ func main() {
 	}
 
 	// Handlers
-	authH := &handlers.AuthHandler{Store: st}
+	authH := &handlers.AuthHandler{
+		Store:        st,
+		AllowDevAuth: os.Getenv("ALLOW_DEV_AUTH") == "true",
+	}
 	userH := &handlers.UserHandler{Store: st}
 	articleH := &handlers.ArticleHandler{Store: st}
 	communityH := &handlers.CommunityHandler{Store: st}
@@ -57,7 +61,11 @@ func main() {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	allowedOrigins := []string{"http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173"}
 	if frontendURL != "" {
-		allowedOrigins = append(allowedOrigins, frontendURL)
+		for _, origin := range strings.Split(frontendURL, ",") {
+			if origin = strings.TrimSpace(origin); origin != "" {
+				allowedOrigins = append(allowedOrigins, origin)
+			}
+		}
 	}
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   allowedOrigins,

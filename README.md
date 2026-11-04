@@ -126,7 +126,8 @@ docker compose up -d backend
 |-------------------------|-----------------------------------------------------------------------|-------------------------|
 | `PORT`                  | `8080`                                                                | Порт бэкенда            |
 | `DATABASE_URL`          | `postgres://newnorth:newnorth@localhost:5432/newnorth?sslmode=disable` | Подключение к PostgreSQL|
-| `FRONTEND_URL`          | —                                                                     | CORS origin             |
+| `FRONTEND_URL`          | —                                                                     | CORS origin (comma-separated) |
+| `ALLOW_DEV_AUTH`        | `false` (backend), `true` in Docker Compose                           | Разрешает тестовый код `123456` для сидов. Только для разработки! |
 | `VITE_API_BASE_URL`     | `/api`                                                                | Базовый путь API для фронтенда |
 | `VITE_API_PROXY_TARGET` | `http://localhost:8080`                                                | Цель прокси Vite        |
 | `VITE_USE_MOCKS`        | `true` в dev                                                           | Локальные данные без backend и БД |

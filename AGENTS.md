@@ -71,6 +71,9 @@ There are no automated tests yet. See PLANS.md for the testing/CI roadmap.
   admins, and the creator. Any new endpoint that returns or mutates article data
   must call `Store.CanViewArticle` (or filter in SQL) consistently. Non-members
   receive `403 {"error":"community_only"}`.
+- The fixed code `123456` is a development-only login. It is gated by
+  `ALLOW_DEV_AUTH=true`; never set that variable in production. Real Telegram
+  auth is still a P0 item in PLANS.md.
 - The mock API must mirror backend behavior, including pagination and
   `community_only` visibility. Mock data lives in `localStorage` under
   `new-north:mock:v<N>:`. Bump `STORAGE_PREFIX` when changing seed data so

@@ -17,6 +17,7 @@ services:
     environment:
       - PORT=8080
       - DATABASE_URL=postgres://newnorth:newnorth@db:5432/newnorth?sslmode=disable
+      - ALLOW_DEV_AUTH=${ALLOW_DEV_AUTH:-true}
     depends_on:
       - db
 

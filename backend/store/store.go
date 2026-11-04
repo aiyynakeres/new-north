@@ -21,11 +21,9 @@ func New(db *DB) *Store {
 	return &Store{db: db}
 }
 
-func (s *Store) IsAuthCodeValid(code string) bool {
-	return code == "123456"
-}
-
-func (s *Store) VerifyAuthCode(telegramHandle, code string) *models.User {
+// VerifyDevAuthCode accepts the shared development code for seeded users.
+// Callers must only use this when ALLOW_DEV_AUTH is enabled.
+func (s *Store) VerifyDevAuthCode(telegramHandle, code string) *models.User {
 	if code != "123456" {
 		return nil
 	}

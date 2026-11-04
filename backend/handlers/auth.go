@@ -9,10 +9,24 @@ import (
 )
 
 type AuthHandler struct {
-	Store *store.Store
+	Store        *store.Store
+	AllowDevAuth bool
+}
+
+func (h *AuthHandler) devAuthDisabled(w http.ResponseWriter) bool {
+	if h.AllowDevAuth {
+		return false
+	}
+	writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+		"error": "authentication is not configured",
+	})
+	return true
 }
 
 func (h *AuthHandler) RequestCode(w http.ResponseWriter, r *http.Request) {
+	if h.devAuthDisabled(w) {
+		return
+	}
 	var req models.AuthCodeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
@@ -24,12 +38,15 @@ func (h *AuthHandler) RequestCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) VerifyCode(w http.ResponseWriter, r *http.Request) {
+	if h.devAuthDisabled(w) {
+		return
+	}
 	var req models.AuthCodeVerify
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
 		return
 	}
-	user := h.Store.VerifyAuthCode(req.TelegramHandle, req.Code)
+	user := h.Store.VerifyDevAuthCode(req.TelegramHandle, req.Code)
 	if user == nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid code or user not found"})
 		return
@@ -39,6 +56,9 @@ func (h *AuthHandler) VerifyCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if h.devAuthDisabled(w) {
+		return
+	}
 	var req models.RegisterInput
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
