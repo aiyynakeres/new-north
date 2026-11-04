@@ -110,6 +110,7 @@ There are no automated tests yet. See PLANS.md for the testing/CI roadmap.
   (`new-north-frontend-git-preview-aiyynakeres-projects.vercel.app`,
   `new-north-backend-git-preview-aiyynakeres-projects.vercel.app`).
 - Pushes to `main` deploy Production; pushes to `preview` deploy Preview.
+  Merge `main` into `preview` to keep staging current.
 
 ## Verification before finishing
 
