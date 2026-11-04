@@ -2,7 +2,7 @@
 	"rewrites": [
 		{
 			"source": "/api/(.*)",
-			"destination": "https://new-north-api.vercel.app/api/$1"
+			"destination": "https://new-north-backend.vercel.app/api/$1"
 		},
 		{
 			"source": "/(.*)",

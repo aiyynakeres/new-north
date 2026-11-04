@@ -20,6 +20,11 @@ func main() {
 
 	// Database
 	databaseURL := os.Getenv("DATABASE_URL")
+	if os.Getenv("VERCEL_ENV") == "preview" {
+		if previewURL := os.Getenv("PREVIEW_DATABASE_URL"); previewURL != "" {
+			databaseURL = previewURL
+		}
+	}
 	if databaseURL == "" {
 		databaseURL = "postgres://newnorth:newnorth@localhost:5432/newnorth?sslmode=disable"
 	}
