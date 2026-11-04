@@ -134,8 +134,9 @@ There are currently no tests and no CI pipeline.
 
 ### Shared
 
-- Pushes to `main` deploy Production; pushes to the `preview` branch deploy
-  Preview. Merge `main` into `preview` to keep staging current.
+- Pushes to `preview` deploy Preview. Production is updated through a pull
+  request from `preview` to `main`; direct pushes to `main` are blocked by
+  branch protection. Merge `main` back into `preview` to keep staging current.
 - Do not create separate Vercel projects per environment. Use the built-in
   Production/Preview environments and their env vars.
 

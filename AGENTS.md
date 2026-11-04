@@ -106,8 +106,9 @@ There are no automated tests yet. See PLANS.md for the testing/CI roadmap.
   The Preview frontend uses an absolute `VITE_API_BASE_URL` instead.
 - Preview uses `PREVIEW_DATABASE_URL`, selected by the backend when
   `VERCEL_ENV=preview`.
-- Pushes to `main` deploy Production; pushes to `preview` deploy Preview.
-  Merge `main` into `preview` to keep staging current.
+- Pushes to `preview` deploy Preview. Production is updated by opening a pull
+  request from `preview` to `main`; direct pushes to `main` are blocked by
+  branch protection. Merge `main` back into `preview` to keep staging current.
 
 ## Verification before finishing
 
