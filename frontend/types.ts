@@ -1,10 +1,17 @@
 export interface User {
 	id: string;
 	telegramHandle: string;
+	nickname?: string;
 	fullName: string;
 	avatarUrl: string;
 	bannerUrl: string;
+	country?: string;
+	city?: string;
 	bio: string;
+	occupation?: string;
+	company?: string;
+	aboutClub?: string;
+	clubOffers?: string[];
 	tags: string[];
 	joinedAt: string;
 }
@@ -83,4 +90,24 @@ export enum ViewState {
 export interface AuthState {
 	isAuthenticated: boolean;
 	currentUser: User | null;
+}
+
+export interface RegisterInput {
+	telegramHandle: string;
+	nickname: string;
+	fullName: string;
+	avatarUrl: string;
+	country: string;
+	city: string;
+	bio: string;
+	occupation: string;
+	company: string;
+	aboutClub: string;
+	clubOffers: string[];
+	tags: string[];
+}
+
+export interface LeaderboardEntry {
+	user: User;
+	articleCount: number;
 }

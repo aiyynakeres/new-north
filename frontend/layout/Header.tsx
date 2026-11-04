@@ -11,13 +11,18 @@ type Props = {
 
 const Header: React.FC<Props> = ({ user, onLogout }) => {
 	return (
-		<header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-north-200">
-			<div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+		<header className="sticky top-0 z-50 border-b border-north-200 bg-white">
+			<div
+				className={`${user ? "max-w-6xl" : "max-w-7xl"} mx-auto flex h-16 items-center justify-between px-4 sm:px-6`}
+			>
 				<Link to="/" className="flex items-center gap-2 group">
-					<div className="w-8 h-8 bg-north-800 rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg group-hover:rotate-3 transition-transform">
-						N
-					</div>
-					<span className="font-serif font-bold text-xl text-north-800 tracking-tight">
+					<img
+						src="/logo.png"
+						alt=""
+						aria-hidden="true"
+						className="h-8 w-8 object-contain transition-transform duration-200 group-hover:-translate-y-0.5"
+					/>
+					<span className="font-serif text-xl font-bold tracking-tight text-north-800">
 						New-North
 					</span>
 				</Link>
@@ -42,18 +47,23 @@ const Header: React.FC<Props> = ({ user, onLogout }) => {
 							<button
 								type="button"
 								onClick={onLogout}
-								className="text-north-400 hover:text-red-500 transition-colors"
+								aria-label="Выйти"
+								className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-north-400 transition-colors hover:bg-red-50 hover:text-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-north-800"
 							>
 								<LogOut size={20} />
 							</button>
 						</>
 					) : (
-						<div className="flex gap-2">
+						<div className="flex items-center gap-1 sm:gap-3">
 							<Link to="/login">
-								<Button variant="ghost">Вход</Button>
+								<Button variant="ghost" className="min-h-11 px-3 text-sm sm:px-4 sm:text-base">
+									Вход
+								</Button>
 							</Link>
 							<Link to="/register">
-								<Button variant="primary">Регистрация</Button>
+								<Button variant="primary" className="min-h-11 px-4 text-sm sm:px-5 sm:text-base">
+									Вступить
+								</Button>
 							</Link>
 						</div>
 					)}

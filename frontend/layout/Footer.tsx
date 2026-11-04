@@ -1,23 +1,32 @@
+import { Mail, Send } from "lucide-react";
 import type React from "react";
 
 const Footer: React.FC = () => (
-	<footer className="bg-white border-t border-north-200 mt-auto py-8">
-		<div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+	<footer className="mt-auto border-t border-north-200 bg-white py-4">
+		<div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:px-6 md:flex-row">
 			<div className="flex items-center gap-2">
-				<div className="w-6 h-6 bg-north-800 rounded flex items-center justify-center text-white font-serif font-bold text-xs">
-					N
-				</div>
-				<span className="font-serif font-bold text-north-800">New-North</span>
+				<img src="/logo.png" alt="" aria-hidden="true" className="h-6 w-6 object-contain" />
+				<span className="font-serif text-base font-bold text-north-800 sm:text-lg">New-North</span>
 			</div>
 
-			<div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-sm text-north-500">
-				<span className="hover:text-north-800 transition-colors cursor-default">Telegram</span>
-				{/* <a href="mailto:contact@new-north.ru" className="hover:text-north-800 transition-colors">
-          new-north@gmail.com
-        </a> */}
+			<div className="flex items-center gap-5 text-sm text-north-500 sm:gap-8">
+				<a
+					href="https://t.me/your_group"
+					target="_blank"
+					rel="noreferrer"
+					className="flex min-h-11 items-center gap-2 rounded-md px-1 transition-colors hover:text-north-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-north-800"
+				>
+					<Send size={18} aria-hidden="true" />
+					tg-канал
+				</a>
+				<a
+					href="mailto:new-north@gmail.com"
+					className="flex min-h-11 items-center gap-2 rounded-md px-1 transition-colors hover:text-north-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-north-800"
+				>
+					<Mail size={18} aria-hidden="true" />
+					n-n@gmail.com
+				</a>
 			</div>
-
-			<div className="text-xs text-north-400">© {new Date().getFullYear()} N-N</div>
 		</div>
 	</footer>
 );

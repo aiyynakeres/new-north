@@ -1,12 +1,11 @@
 import type {
 	Article,
-	ArticleReaction,
-	Comment,
 	Community,
 	LeaderboardEntry,
 	RegisterInput,
 	User,
 } from "../types";
+import { mockApi } from "./mockApi";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
 
@@ -25,7 +24,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 	return JSON.parse(text);
 }
 
-export const api = {
+const httpApi = {
 	// Auth
 	requestCode: (telegramHandle: string) =>
 		request<{ ok: boolean }>("/auth/request-code", {
@@ -58,8 +57,10 @@ export const api = {
 			body: JSON.stringify(data),
 		}),
 
-	followUser: (id: string) => request<void>(`/users/${id}/follow`, { method: "POST" }),
-	unfollowUser: (id: string) => request<void>(`/users/${id}/follow`, { method: "DELETE" }),
+	followUser: (id: string, maybeTargetId?: string) =>
+		request<void>(`/users/${maybeTargetId ?? id}/follow`, { method: "POST" }),
+	unfollowUser: (id: string, maybeTargetId?: string) =>
+		request<void>(`/users/${maybeTargetId ?? id}/follow`, { method: "DELETE" }),
 	getFollowing: (id: string) => request<User[]>(`/users/${id}/following`),
 	isFollowing: (id: string) => request<{ following: boolean }>(`/users/${id}/is-following`),
 
@@ -72,7 +73,7 @@ export const api = {
 	getArticleById: (id: string) => request<Article>(`/articles/${id}`),
 
 	saveArticle: (article: Article) => {
-		const isNew = article.createdAt === undefined || article.id.startsWith("a");
+		const isNew = article.updatedAt === undefined;
 		if (isNew) {
 			return request<Article>("/articles", {
 				method: "POST",
@@ -88,13 +89,13 @@ export const api = {
 	deleteArticle: (id: string) => request<void>(`/articles/${id}`, { method: "DELETE" }),
 
 	addComment: (articleId: string, text: string) =>
-		request<Comment>(`/articles/${articleId}/comments`, {
+		request<Article>(`/articles/${articleId}/comments`, {
 			method: "POST",
 			body: JSON.stringify({ text }),
 		}),
 
 	toggleReaction: (articleId: string, emoji: string) =>
-		request<ArticleReaction>(`/articles/${articleId}/reactions`, {
+		request<Article>(`/articles/${articleId}/reactions`, {
 			method: "POST",
 			body: JSON.stringify({ emoji }),
 		}),
@@ -103,7 +104,7 @@ export const api = {
 
 	getCommunityById: (id: string) => request<Community>(`/communities/${id}`),
 
-	createCommunity: (data: { name: string; description: string; aboutShort?: string }) =>
+	createCommunity: (data: { name: string; description: string; aboutShort?: string }, _creator?: User) =>
 		request<Community>("/communities", {
 			method: "POST",
 			body: JSON.stringify(data),
@@ -111,13 +112,13 @@ export const api = {
 
 	getCommunityMembers: (id: string) => request<User[]>(`/communities/${id}/members`),
 
-	joinCommunity: (id: string) =>
+	joinCommunity: (id: string, _userId?: string) =>
 		request<{ ok: boolean; error?: string }>(`/communities/${id}/join`, {
 			method: "POST",
 		}),
 
-	leaveCommunity: (id: string) =>
-		request<{ ok: boolean }>(`/communities/${id}/leave`, { method: "POST" }),
+	leaveCommunity: (id: string, _userId?: string) =>
+		request<{ ok: boolean; error?: string }>(`/communities/${id}/leave`, { method: "POST" }),
 
 	promoteMember: (communityId: string, userId: string) =>
 		request<{ ok: boolean }>(`/communities/${communityId}/promote`, {
@@ -126,7 +127,7 @@ export const api = {
 		}),
 
 	blockUser: (communityId: string, userId: string) =>
-		request<{ ok: boolean }>(`/communities/${communityId}/block`, {
+		request<{ ok: boolean; error?: string }>(`/communities/${communityId}/block`, {
 			method: "POST",
 			body: JSON.stringify({ targetUserId: userId }),
 		}),
@@ -139,26 +140,33 @@ export const api = {
 	getUserArticles: (userId: string) => request<Article[]>(`/users/${userId}/articles`),
 
 	// Aliases (legacy callers)
-	getAuthorsLeaderboard: () => api.getLeaderboard(),
-	getCommunitiesByMemberCount: () => api.getCommunities(),
-	getUserById: (id: string) => api.getUser(id),
-	getArticlesForProfile: (userId: string) => api.getUserArticles(userId),
-	isFollowingUser: (_currentUserId: string, targetId: string) => api.isFollowing(targetId),
+	getAuthorsLeaderboard: () => httpApi.getLeaderboard(),
+	getCommunitiesByMemberCount: () => httpApi.getCommunities(),
+	getUserById: (id: string) => httpApi.getUser(id),
+	getArticlesForProfile: (userId: string, _viewerId?: string) => httpApi.getUserArticles(userId),
+	isFollowingUser: async (_currentUserId: string, targetId: string) =>
+		(await httpApi.isFollowing(targetId)).following,
 	saveUser: (data: Partial<User>) => {
 		if (!data.id) throw new Error("User ID is required");
-		return api.updateProfile(data.id, data);
+		return httpApi.updateProfile(data.id, data);
 	},
 	verifyAuthCode: async (telegramHandle: string, code: string) => {
-		const res = await api.verifyCode(telegramHandle, code);
+		const res = await httpApi.verifyCode(telegramHandle, code);
 		if (res) localStorage.setItem("token", res.token);
 		return res?.user ?? null;
 	},
-	getArticlesByCommunityId: (communityId: string) => api.getCommunityArticles(communityId),
+	getArticlesByCommunityId: (communityId: string) => httpApi.getCommunityArticles(communityId),
 	promoteCommunityAdmin: (communityId: string, _currentUserId: string, targetId: string) =>
-		api.promoteMember(communityId, targetId),
+		httpApi.promoteMember(communityId, targetId),
 	blockUserFromCommunity: (communityId: string, _currentUserId: string, targetId: string) =>
-		api.blockUser(communityId, targetId),
-	getArticles: () => api.getFeed(),
+		httpApi.blockUser(communityId, targetId),
+	getArticles: () => httpApi.getFeed(),
 	toggleArticleReaction: (articleId: string, _currentUserId: string, emoji: string) =>
-		api.toggleReaction(articleId, emoji),
+		httpApi.toggleReaction(articleId, emoji),
 };
+
+export const isMockMode =
+	import.meta.env.VITE_USE_MOCKS === "true" ||
+	(import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS !== "false");
+
+export const api = (isMockMode ? mockApi : httpApi) as typeof httpApi;

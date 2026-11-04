@@ -16,11 +16,16 @@ import CommunityMembers from "./pages/CommunityMembers";
 import CommunityView from "./pages/CommunityView";
 import Editor from "./pages/Editor";
 import Feed from "./pages/Feed";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import Register from "./pages/Register";
 import { api } from "./services/api";
 import type { User as UserType } from "./types";
+
+function ProtectedRoute({ user, children }: { user: UserType | null; children: React.ReactNode }) {
+	return user ? children : <Navigate to="/" replace />;
+}
 
 function WriteRoute({ user }: { user: UserType | null }) {
 	const [searchParams] = useSearchParams();
@@ -62,21 +67,84 @@ export default function App() {
 				<Header user={user} onLogout={handleLogout} />
 				<div className="flex-1">
 					<Routes>
-						<Route path="/" element={<Feed currentUser={user} />} />
-						<Route path="/register" element={<Register onLogin={setUser} />} />
-						<Route path="/login" element={<Login onLogin={setUser} />} />
-						<Route path="/article/:id" element={<ArticleView currentUser={user} />} />
-						<Route path="/profile/:id" element={<Profile currentUser={user} />} />
-						<Route path="/authors" element={<Authors />} />
-						<Route path="/communities" element={<Communities currentUser={user} />} />
-						<Route path="/community/:id/members" element={<CommunityMembers />} />
-						<Route path="/community/:id" element={<CommunityView currentUser={user} />} />
-						<Route path="/people" element={<Navigate to="/authors" replace />} />
-						<Route path="/write" element={<WriteRoute user={user} />} />
+						<Route path="/" element={user ? <Feed currentUser={user} /> : <Landing />} />
+						<Route
+							path="/register"
+							element={user ? <Navigate to="/" replace /> : <Register onLogin={setUser} />}
+						/>
+						<Route
+							path="/login"
+							element={user ? <Navigate to="/" replace /> : <Login onLogin={setUser} />}
+						/>
+						<Route
+							path="/article/:id"
+							element={
+								<ProtectedRoute user={user}>
+									<ArticleView currentUser={user} />
+								</ProtectedRoute>
+							}
+						/>
+						<Route
+							path="/profile/:id"
+							element={
+								<ProtectedRoute user={user}>
+									<Profile currentUser={user} />
+								</ProtectedRoute>
+							}
+						/>
+						<Route
+							path="/authors"
+							element={
+								<ProtectedRoute user={user}>
+									<Authors />
+								</ProtectedRoute>
+							}
+						/>
+						<Route
+							path="/communities"
+							element={
+								<ProtectedRoute user={user}>
+									<Communities currentUser={user} />
+								</ProtectedRoute>
+							}
+						/>
+						<Route
+							path="/community/:id/members"
+							element={
+								<ProtectedRoute user={user}>
+									<CommunityMembers />
+								</ProtectedRoute>
+							}
+						/>
+						<Route
+							path="/community/:id"
+							element={
+								<ProtectedRoute user={user}>
+									<CommunityView currentUser={user} />
+								</ProtectedRoute>
+							}
+						/>
+						<Route
+							path="/people"
+							element={user ? <Navigate to="/authors" replace /> : <Navigate to="/" replace />}
+						/>
+						<Route
+							path="/write"
+							element={
+								<ProtectedRoute user={user}>
+									<WriteRoute user={user} />
+								</ProtectedRoute>
+							}
+						/>
 						<Route
 							path="/edit/:id"
-							element={user ? <Editor currentUser={user} /> : <Navigate to="/login" />}
+							element={
+								<ProtectedRoute user={user}>
+									{user ? <Editor currentUser={user} /> : null}
+								</ProtectedRoute>
+							}
 						/>
+						<Route path="*" element={<Navigate to="/" replace />} />
 					</Routes>
 				</div>
 				<Footer />
