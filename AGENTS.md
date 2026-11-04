@@ -96,8 +96,9 @@ There are no automated tests yet. See PLANS.md for the testing/CI roadmap.
   https://new-north-backend.vercel.app (backend) — projects
   `new-north-frontend` / `new-north-backend`, production Neon DB.
 - **Preview (staging):** https://new-north-preview.vercel.app (frontend) and
-  https://new-north-backend-preview.vercel.app (backend) — deployments from the
-  `preview` branch in the same two projects, separate Neon DB.
+  https://new-north-backend-preview.vercel.app (backend) — project domains
+  assigned to the `preview` branch in the same two projects, separate Neon DB.
+  They follow preview deployments automatically.
 - Do not create separate Vercel projects per environment.
 - `ALLOW_DEV_AUTH=true` only in the backend Preview environment; production
   leaves it unset and rejects `/auth/*` with `503` until real auth ships.
@@ -105,10 +106,6 @@ There are no automated tests yet. See PLANS.md for the testing/CI roadmap.
   The Preview frontend uses an absolute `VITE_API_BASE_URL` instead.
 - Preview uses `PREVIEW_DATABASE_URL`, selected by the backend when
   `VERCEL_ENV=preview`.
-- The pretty preview URLs are pinned aliases; re-point them after preview
-  deployments or use the stable branch aliases
-  (`new-north-frontend-git-preview-aiyynakeres-projects.vercel.app`,
-  `new-north-backend-git-preview-aiyynakeres-projects.vercel.app`).
 - Pushes to `main` deploy Production; pushes to `preview` deploy Preview.
   Merge `main` into `preview` to keep staging current.
 
