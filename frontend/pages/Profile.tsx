@@ -4,9 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ArticleCard from "../components/articles/ArticleCard";
 import Button from "../components/ui/Button";
+import InfiniteScrollSentinel from "../components/ui/InfiniteScrollSentinel";
 import Tag from "../components/ui/Tag";
+import { useInfiniteArticles } from "../hooks/useInfiniteArticles";
 import { api } from "../services/api";
-import type { Article as ArticleType, Community, User as UserType } from "../types";
+import type { Community, User as UserType } from "../types";
 
 type Props = {
 	currentUser: UserType | null;
@@ -15,7 +17,6 @@ type Props = {
 const Profile: React.FC<Props> = ({ currentUser }) => {
 	const { id } = useParams<{ id: string }>();
 	const [user, setUser] = useState<UserType | null>(null);
-	const [userArticles, setUserArticles] = useState<ArticleType[]>([]);
 	const [isEditing, setIsEditing] = useState(false);
 	const [editedBio, setEditedBio] = useState("");
 	const [editedTags, setEditedTags] = useState<string[]>([]);
@@ -29,21 +30,32 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
 	const [isFollowing, setIsFollowing] = useState(false);
 	const [allUsers, setAllUsers] = useState<UserType[]>([]);
 
+	const fetchArticles = useCallback(
+		(limit: number, offset: number) =>
+			id ? api.getUserArticles(id, limit, offset) : Promise.resolve({ items: [], hasMore: false }),
+		[id],
+	);
+	const {
+		articles: userArticles,
+		hasMore: articlesHasMore,
+		loading: articlesLoading,
+		loadMore: loadMoreArticles,
+		setArticles: setUserArticles,
+	} = useInfiniteArticles(`${id ?? ""}:${currentUser?.id ?? ""}`, fetchArticles);
+
 	useEffect(() => {
 		if (!id) return;
 		(async () => {
 			const u = await api.getUserById(id);
 			if (u) {
 				setUser(u);
-				const [articles, communities, allU, following] = await Promise.all([
-					api.getArticlesForProfile(u.id, currentUser?.id),
+				const [communities, allU, following] = await Promise.all([
 					api.getCommunitiesForMember(u.id),
 					api.getUsers(),
 					currentUser && currentUser.id !== u.id
 						? api.isFollowingUser(currentUser.id, u.id)
 						: Promise.resolve(false),
 				]);
-				setUserArticles(articles ?? []);
 				setUserCommunities(communities ?? []);
 				setAllUsers(allU);
 				setIsFollowing(following);
@@ -436,9 +448,14 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
 								}
 							/>
 						))}
-						{userArticles.length === 0 && (
+						{!articlesLoading && userArticles.length === 0 && (
 							<p className="text-north-400 italic">No articles published yet.</p>
 						)}
+						<InfiniteScrollSentinel
+							hasMore={articlesHasMore}
+							loading={articlesLoading}
+							onLoadMore={loadMoreArticles}
+						/>
 					</div>
 				</div>
 			</div>

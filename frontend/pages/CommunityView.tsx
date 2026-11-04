@@ -3,8 +3,10 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Button from "../components/ui/Button";
+import InfiniteScrollSentinel from "../components/ui/InfiniteScrollSentinel";
+import { useInfiniteArticles } from "../hooks/useInfiniteArticles";
 import { api } from "../services/api";
-import type { Article as ArticleType, Community, User as UserType } from "../types";
+import type { Community, User as UserType } from "../types";
 
 type Props = {
 	currentUser: UserType | null;
@@ -14,21 +16,34 @@ const CommunityView: React.FC<Props> = ({ currentUser }) => {
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
 	const [community, setCommunity] = useState<Community | null>(null);
-	const [articles, setArticles] = useState<ArticleType[]>([]);
 	const [users, setUsers] = useState<UserType[]>([]);
 	const [msg, setMsg] = useState("");
 
+	const fetchArticles = useCallback(
+		(limit: number, offset: number) =>
+			id
+				? api.getCommunityArticles(id, limit, offset)
+				: Promise.resolve({ items: [], hasMore: false }),
+		[id],
+	);
+	const {
+		articles,
+		hasMore,
+		loading: articlesLoading,
+		loadMore,
+		reload: reloadArticles,
+	} = useInfiniteArticles(id ?? "", fetchArticles);
+
 	const refresh = useCallback(async () => {
 		if (!id) return;
-		const [c, articles, users] = await Promise.all([
-			api.getCommunityById(id),
-			api.getArticlesByCommunityId(id),
-			api.getUsers(),
-		]);
+		const [c, users] = await Promise.all([api.getCommunityById(id), api.getUsers()]);
 		setCommunity(c || null);
-		setArticles(articles.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)));
 		setUsers(users);
 	}, [id]);
+
+	const refreshAll = useCallback(async () => {
+		await Promise.all([refresh(), reloadArticles()]);
+	}, [refresh, reloadArticles]);
 
 	useEffect(() => {
 		refresh();
@@ -62,7 +77,7 @@ const CommunityView: React.FC<Props> = ({ currentUser }) => {
 		} catch {
 			setMsg("Вам закрыт доступ к этому сообществу.");
 		}
-		await refresh();
+		await refreshAll();
 	};
 
 	const handleLeave = async () => {
@@ -80,20 +95,20 @@ const CommunityView: React.FC<Props> = ({ currentUser }) => {
 				"Создатель не может покинуть сообщество (передайте права или удалите группу в будущей версии).",
 			);
 		}
-		await refresh();
+		await refreshAll();
 	};
 
 	const handlePromote = async (targetId: string) => {
 		if (!currentUser || !community) return;
 		await api.promoteCommunityAdmin(community.id, currentUser.id, targetId);
-		await refresh();
+		await refreshAll();
 	};
 
 	const handleBlock = async (targetId: string) => {
 		if (!currentUser || !community) return;
 		const r = await api.blockUserFromCommunity(community.id, currentUser.id, targetId);
 		if (!r.ok && r.error === "cannot_block_creator") setMsg("Нельзя заблокировать создателя.");
-		await refresh();
+		await refreshAll();
 	};
 
 	const handleJoinClick = () => {
@@ -214,10 +229,15 @@ const CommunityView: React.FC<Props> = ({ currentUser }) => {
 								</Link>
 							</li>
 						))}
-						{articles.length === 0 && (
+						{!articlesLoading && articles.length === 0 && (
 							<p className="text-north-400 text-sm italic">Пока нет постов в этом сообществе.</p>
 						)}
 					</ul>
+					<InfiniteScrollSentinel
+						hasMore={hasMore}
+						loading={articlesLoading}
+						onLoadMore={loadMore}
+					/>
 				</section>
 
 				{isModerator && (

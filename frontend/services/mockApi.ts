@@ -1,6 +1,6 @@
 import type { Article, Community, LeaderboardEntry, RegisterInput, User } from "../types";
 
-const STORAGE_PREFIX = "new-north:mock:v2:";
+const STORAGE_PREFIX = "new-north:mock:v3:";
 const SESSION_KEY = `${STORAGE_PREFIX}session`;
 
 const seedUsers: User[] = [
@@ -170,6 +170,246 @@ const seedArticles: Article[] = [
 		comments: [],
 		reactions: [{ emoji: "🔥", userId: "u1" }],
 	},
+	{
+		id: "a4",
+		authorId: "u1",
+		audience: "public",
+		title: "Пять мест в Якутске, где хорошо работается",
+		preview: "Кофейни, библиотеки и коворкинги, проверенные на себе.",
+		content: "Legacy content",
+		blocks: [
+			{ id: "a4b1", type: "h1", content: "Где работать" },
+			{
+				id: "a4b2",
+				type: "paragraph",
+				content: "Делюсь местами, где есть розетки, тишина и хороший кофе.",
+			},
+		],
+		tags: ["якутск", "работа"],
+		createdAt: "2025-01-06T00:00:00Z",
+		views: 64,
+		commentsCount: 0,
+	},
+	{
+		id: "a5",
+		authorId: "u2",
+		audience: "public",
+		title: "Как я перешла на TypeScript и не пожалела",
+		preview: "Небольшая история о миграции проекта без остановки разработки.",
+		content: "Legacy content",
+		blocks: [
+			{
+				id: "a5b1",
+				type: "paragraph",
+				content: "Начала с strict mode на новых файлах и постепенно расширяла границы.",
+			},
+		],
+		tags: ["frontend", "typescript"],
+		createdAt: "2025-01-07T00:00:00Z",
+		views: 91,
+		commentsCount: 0,
+	},
+	{
+		id: "a6",
+		authorId: "u1",
+		communityId: "c1",
+		audience: "public",
+		title: "Итоги первого месяца New-North",
+		preview: "Что получилось, что нет и куда двигаемся дальше.",
+		content: "Legacy content",
+		blocks: [
+			{ id: "a6b1", type: "h1", content: "Первый месяц" },
+			{
+				id: "a6b2",
+				type: "paragraph",
+				content: "Спасибо всем, кто присоединился и помог сделать платформу теплее.",
+			},
+		],
+		tags: ["продукт", "сообщество"],
+		createdAt: "2025-01-08T00:00:00Z",
+		views: 137,
+		commentsCount: 0,
+	},
+	{
+		id: "a7",
+		authorId: "u2",
+		communityId: "c3",
+		audience: "public",
+		title: "Тихий вечер в Ленских столбах",
+		preview: "Небольшая заметка о поездке без спешки.",
+		content: "Legacy content",
+		blocks: [
+			{
+				id: "a7b1",
+				type: "paragraph",
+				content: "Иногда лучшее, что можно сделать, — выключить телефон и посмотреть на реку.",
+			},
+		],
+		tags: ["путешествия", "якутия"],
+		createdAt: "2025-01-09T00:00:00Z",
+		views: 72,
+		commentsCount: 0,
+	},
+	{
+		id: "a8",
+		authorId: "u1",
+		communityId: "c2",
+		audience: "public",
+		title: "React 19: что реально изменилось",
+		preview: "Короткий разбор изменений, которые заметит обычный разработчик.",
+		content: "Legacy content",
+		blocks: [
+			{ id: "a8b1", type: "h2", content: "Формы и действия" },
+			{
+				id: "a8b2",
+				type: "paragraph",
+				content: "Экшены и useActionState заметно упрощают обработку форм.",
+			},
+		],
+		tags: ["react", "frontend"],
+		createdAt: "2025-01-10T00:00:00Z",
+		views: 158,
+		commentsCount: 0,
+	},
+	{
+		id: "a9",
+		authorId: "u2",
+		audience: "public",
+		title: "Мой список книг на зиму",
+		preview: "Пять книг, которые хочу прочитать до весны.",
+		content: "Legacy content",
+		blocks: [
+			{
+				id: "a9b1",
+				type: "paragraph",
+				content: "В списке есть и техническая литература, и художественная проза.",
+			},
+		],
+		tags: ["книги", "зима"],
+		createdAt: "2025-01-11T00:00:00Z",
+		views: 43,
+		commentsCount: 0,
+	},
+	{
+		id: "a10",
+		authorId: "u1",
+		communityId: "c1",
+		audience: "public",
+		title: "Как мы модерируем сообщество",
+		preview: "Несколько правил, которые помогают сохранять спокойную атмосферу.",
+		content: "Legacy content",
+		blocks: [
+			{
+				id: "a10b1",
+				type: "paragraph",
+				content: "Главный принцип — уважение к человеку, а не к должности или статусу.",
+			},
+		],
+		tags: ["сообщество", "модерация"],
+		createdAt: "2025-01-12T00:00:00Z",
+		views: 88,
+		commentsCount: 0,
+	},
+	{
+		id: "a11",
+		authorId: "u2",
+		communityId: "c3",
+		audience: "public",
+		title: "Зачем писать длинные тексты",
+		preview: "Мысли о медленном чтении и внимании к деталям.",
+		content: "Legacy content",
+		blocks: [
+			{
+				id: "a11b1",
+				type: "paragraph",
+				content: "Короткие посты отвечают на вопрос «что», длинные — на вопрос «почему».",
+			},
+		],
+		tags: ["тексты", "медленное чтение"],
+		createdAt: "2025-01-13T00:00:00Z",
+		views: 56,
+		commentsCount: 0,
+	},
+	{
+		id: "a12",
+		authorId: "u1",
+		communityId: "c2",
+		audience: "public",
+		title: "Деплой без боли: Docker Compose",
+		preview: "Как собрать фронтенд, бэкенд и базу одной командой.",
+		content: "Legacy content",
+		blocks: [
+			{
+				id: "a12b1",
+				type: "paragraph",
+				content: "Compose удобен для небольших проектов, пока не нужна сложная оркестрация.",
+			},
+		],
+		tags: ["docker", "devops"],
+		createdAt: "2025-01-14T00:00:00Z",
+		views: 112,
+		commentsCount: 0,
+	},
+	{
+		id: "a13",
+		authorId: "u2",
+		communityId: "c1",
+		audience: "public",
+		title: "Что я поняла после десяти митапов",
+		preview: "Наблюдения о людях, подготовке и случайных знакомствах.",
+		content: "Legacy content",
+		blocks: [
+			{
+				id: "a13b1",
+				type: "paragraph",
+				content: "Лучшие разговоры часто начинаются после официальной части.",
+			},
+		],
+		tags: ["митапы", "сообщество"],
+		createdAt: "2025-01-15T00:00:00Z",
+		views: 76,
+		commentsCount: 0,
+	},
+	{
+		id: "a14",
+		authorId: "u1",
+		communityId: "c1",
+		audience: "community_only",
+		title: "Черновик плана развития клуба",
+		preview: "Внутренний документ для участников клуба New-North.",
+		content: "Legacy content",
+		blocks: [
+			{
+				id: "a14b1",
+				type: "paragraph",
+				content: "Обсудим идеи на следующей встрече, черновик пока сырой.",
+			},
+		],
+		tags: ["клуб", "планы"],
+		createdAt: "2025-01-16T00:00:00Z",
+		views: 12,
+		commentsCount: 0,
+	},
+	{
+		id: "a15",
+		authorId: "u2",
+		communityId: "c2",
+		audience: "community_only",
+		title: "Внутренний созвон Dev Якутии",
+		preview: "Заметки для участников сообщества после встречи.",
+		content: "Legacy content",
+		blocks: [
+			{
+				id: "a15b1",
+				type: "paragraph",
+				content: "Собрали список тем на следующий митап — подробности внутри.",
+			},
+		],
+		tags: ["dev", "встречи"],
+		createdAt: "2025-01-17T00:00:00Z",
+		views: 9,
+		commentsCount: 0,
+	},
 ];
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -194,7 +434,8 @@ const communities = () => read<Community[]>("communities", seedCommunities);
 const following = () =>
 	read<Record<string, string[]>>("following", { u1: ["u2", "u3"], u2: ["u1"] });
 const normalizeHandle = (handle: string) => handle.trim().replace(/^@/, "").toLowerCase();
-const byNewest = (a: Article, b: Article) => Date.parse(b.createdAt) - Date.parse(a.createdAt);
+const byNewest = (a: Article, b: Article) =>
+	Date.parse(b.createdAt) - Date.parse(a.createdAt) || b.id.localeCompare(a.id);
 
 function getSessionUser(): User | null {
 	const userId = localStorage.getItem(SESSION_KEY);
@@ -216,6 +457,26 @@ function findArticle(id: string): Article {
 	const article = articles().find((item) => item.id === id);
 	if (!article) throw new Error("Статья не найдена");
 	return article;
+}
+
+function canViewArticle(article: Article, userId: string | null): boolean {
+	if (article.audience !== "community_only") return true;
+	if (userId && article.authorId === userId) return true;
+	if (!article.communityId || !userId) return false;
+	const community = communities().find((item) => item.id === article.communityId);
+	if (!community) return false;
+	return (
+		community.creatorId === userId ||
+		community.adminIds.includes(userId) ||
+		community.memberIds.includes(userId)
+	);
+}
+
+function paginate<T>(items: T[], limit: number, offset: number): { items: T[]; hasMore: boolean } {
+	return {
+		items: clone(items.slice(offset, offset + limit)),
+		hasMore: offset + limit < items.length,
+	};
 }
 
 export const mockApi = {
@@ -322,25 +583,43 @@ export const mockApi = {
 		);
 	},
 
-	getFeed: async () =>
-		clone(
+	getFeed: async (limit = 20, offset = 0) =>
+		paginate(
 			articles()
 				.filter((article) => article.audience !== "community_only")
 				.sort(byNewest),
+			limit,
+			offset,
 		),
-	getArticleById: async (id: string) => clone(findArticle(id)),
-	getUserArticles: async (userId: string) =>
-		clone(
+	getArticleById: async (id: string) => {
+		const article = findArticle(id);
+		if (!canViewArticle(article, getSessionUser()?.id ?? null)) {
+			throw new Error("community_only");
+		}
+		return clone(article);
+	},
+	getUserArticles: async (userId: string, limit = 20, offset = 0) => {
+		const viewerId = getSessionUser()?.id ?? null;
+		return paginate(
 			articles()
-				.filter((article) => article.authorId === userId)
+				.filter((article) => article.authorId === userId && canViewArticle(article, viewerId))
 				.sort(byNewest),
-		),
-	getCommunityArticles: async (communityId: string) =>
-		clone(
+			limit,
+			offset,
+		);
+	},
+	getCommunityArticles: async (communityId: string, limit = 20, offset = 0) => {
+		const viewerId = getSessionUser()?.id ?? null;
+		return paginate(
 			articles()
-				.filter((article) => article.communityId === communityId)
+				.filter(
+					(article) => article.communityId === communityId && canViewArticle(article, viewerId),
+				)
 				.sort(byNewest),
-		),
+			limit,
+			offset,
+		);
+	},
 	saveArticle: async (article: Article) => {
 		const allArticles = articles();
 		const index = allArticles.findIndex((item) => item.id === article.id);
@@ -360,6 +639,7 @@ export const mockApi = {
 		const allArticles = articles();
 		const index = allArticles.findIndex((article) => article.id === articleId);
 		if (index < 0) throw new Error("Статья не найдена");
+		if (!canViewArticle(allArticles[index], currentUser.id)) throw new Error("community_only");
 		const comments = [
 			...(allArticles[index].comments ?? []),
 			{
@@ -378,6 +658,7 @@ export const mockApi = {
 		const allArticles = articles();
 		const index = allArticles.findIndex((article) => article.id === articleId);
 		if (index < 0) throw new Error("Статья не найдена");
+		if (!canViewArticle(allArticles[index], currentUser.id)) throw new Error("community_only");
 		const reactions = allArticles[index].reactions ?? [];
 		const exists = reactions.some(
 			(reaction) => reaction.userId === currentUser.id && reaction.emoji === emoji,
@@ -479,8 +760,8 @@ export const mockApi = {
 	getAuthorsLeaderboard: async () => mockApi.getLeaderboard(),
 	getCommunitiesByMemberCount: async () => mockApi.getCommunities(),
 	getUserById: async (id: string) => mockApi.getUser(id),
-	getArticlesForProfile: async (userId: string, _viewerId?: string) =>
-		mockApi.getUserArticles(userId),
+	getArticlesForProfile: async (userId: string, _viewerId?: string, limit = 20, offset = 0) =>
+		mockApi.getUserArticles(userId, limit, offset),
 	isFollowingUser: async (currentUserId: string, targetId: string) =>
 		(following()[currentUserId] ?? []).includes(targetId),
 	saveUser: async (data: Partial<User>) => {
@@ -489,13 +770,13 @@ export const mockApi = {
 	},
 	verifyAuthCode: async (telegramHandle: string, code: string) =>
 		(await mockApi.verifyCode(telegramHandle, code)).user,
-	getArticlesByCommunityId: async (communityId: string) =>
-		mockApi.getCommunityArticles(communityId),
+	getArticlesByCommunityId: async (communityId: string, limit = 20, offset = 0) =>
+		mockApi.getCommunityArticles(communityId, limit, offset),
 	promoteCommunityAdmin: async (communityId: string, _currentUserId: string, targetId: string) =>
 		mockApi.promoteMember(communityId, targetId),
 	blockUserFromCommunity: async (communityId: string, _currentUserId: string, targetId: string) =>
 		mockApi.blockUser(communityId, targetId),
-	getArticles: async () => mockApi.getFeed(),
+	getArticles: async (limit = 20, offset = 0) => mockApi.getFeed(limit, offset),
 	toggleArticleReaction: async (articleId: string, _currentUserId: string, emoji: string) =>
 		mockApi.toggleReaction(articleId, emoji),
 };

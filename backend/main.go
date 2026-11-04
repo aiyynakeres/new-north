@@ -88,14 +88,14 @@ func main() {
 	// Article routes
 	r.Get("/api/feed", articleH.ListFeed)
 	r.With(authMiddleware).Post("/api/articles", articleH.CreateArticle)
-	r.Get("/api/articles/{id}", articleH.GetArticle)
+	r.With(optionalAuth).Get("/api/articles/{id}", articleH.GetArticle)
 	r.With(authMiddleware).Put("/api/articles/{id}", articleH.UpdateArticle)
 	r.With(authMiddleware).Delete("/api/articles/{id}", articleH.DeleteArticle)
 	r.With(authMiddleware).Post("/api/articles/{id}/comments", articleH.AddComment)
 	r.With(authMiddleware).Post("/api/articles/{id}/reactions", articleH.ToggleReaction)
 
 	// Community article routes
-	r.Get("/api/communities/{id}/articles", articleH.ListByCommunity)
+	r.With(optionalAuth).Get("/api/communities/{id}/articles", articleH.ListByCommunity)
 
 	// Community routes
 	r.Get("/api/communities", communityH.List)

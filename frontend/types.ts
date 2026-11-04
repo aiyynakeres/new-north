@@ -60,6 +60,11 @@ export interface Article {
 	reactions?: ArticleReaction[];
 }
 
+export interface ArticlePage {
+	items: Article[];
+	hasMore: boolean;
+}
+
 /** Сообщество (аналог группы): создатель, админы, участники, блокировки */
 export interface Community {
 	id: string;

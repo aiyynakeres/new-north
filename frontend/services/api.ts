@@ -1,4 +1,11 @@
-import type { Article, Community, LeaderboardEntry, RegisterInput, User } from "../types";
+import type {
+	Article,
+	ArticlePage,
+	Community,
+	LeaderboardEntry,
+	RegisterInput,
+	User,
+} from "../types";
 import { mockApi } from "./mockApi";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
@@ -62,7 +69,8 @@ const httpApi = {
 	getLeaderboard: () => request<LeaderboardEntry[]>("/authors/leaderboard"),
 
 	// Articles
-	getFeed: () => request<Article[]>("/feed"),
+	getFeed: (limit = 20, offset = 0) =>
+		request<ArticlePage>(`/feed?limit=${limit}&offset=${offset}`),
 
 	getArticleById: (id: string) => request<Article>(`/articles/${id}`),
 
@@ -131,16 +139,18 @@ const httpApi = {
 
 	getCommunitiesForMember: (_userId: string) => request<Community[]>(`/communities/my`),
 
-	getCommunityArticles: (communityId: string) =>
-		request<Article[]>(`/communities/${communityId}/articles`),
+	getCommunityArticles: (communityId: string, limit = 20, offset = 0) =>
+		request<ArticlePage>(`/communities/${communityId}/articles?limit=${limit}&offset=${offset}`),
 
-	getUserArticles: (userId: string) => request<Article[]>(`/users/${userId}/articles`),
+	getUserArticles: (userId: string, limit = 20, offset = 0) =>
+		request<ArticlePage>(`/users/${userId}/articles?limit=${limit}&offset=${offset}`),
 
 	// Aliases (legacy callers)
 	getAuthorsLeaderboard: () => httpApi.getLeaderboard(),
 	getCommunitiesByMemberCount: () => httpApi.getCommunities(),
 	getUserById: (id: string) => httpApi.getUser(id),
-	getArticlesForProfile: (userId: string, _viewerId?: string) => httpApi.getUserArticles(userId),
+	getArticlesForProfile: (userId: string, _viewerId?: string, limit = 20, offset = 0) =>
+		httpApi.getUserArticles(userId, limit, offset),
 	isFollowingUser: async (_currentUserId: string, targetId: string) =>
 		(await httpApi.isFollowing(targetId)).following,
 	saveUser: (data: Partial<User>) => {
@@ -152,12 +162,13 @@ const httpApi = {
 		if (res) localStorage.setItem("token", res.token);
 		return res?.user ?? null;
 	},
-	getArticlesByCommunityId: (communityId: string) => httpApi.getCommunityArticles(communityId),
+	getArticlesByCommunityId: (communityId: string, limit = 20, offset = 0) =>
+		httpApi.getCommunityArticles(communityId, limit, offset),
 	promoteCommunityAdmin: (communityId: string, _currentUserId: string, targetId: string) =>
 		httpApi.promoteMember(communityId, targetId),
 	blockUserFromCommunity: (communityId: string, _currentUserId: string, targetId: string) =>
 		httpApi.blockUser(communityId, targetId),
-	getArticles: () => httpApi.getFeed(),
+	getArticles: (limit = 20, offset = 0) => httpApi.getFeed(limit, offset),
 	toggleArticleReaction: (articleId: string, _currentUserId: string, emoji: string) =>
 		httpApi.toggleReaction(articleId, emoji),
 };

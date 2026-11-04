@@ -14,8 +14,12 @@ type ArticleHandler struct {
 }
 
 func (h *ArticleHandler) ListFeed(w http.ResponseWriter, r *http.Request) {
-	articles := h.Store.GetArticlesForPublicFeed()
-	writeJSON(w, http.StatusOK, articles)
+	limit, offset := pageParams(r)
+	articles, hasMore := h.Store.GetArticlesForPublicFeed(limit, offset)
+	if articles == nil {
+		articles = []*models.Article{}
+	}
+	writeJSON(w, http.StatusOK, models.ArticlePage{Items: articles, HasMore: hasMore})
 }
 
 func (h *ArticleHandler) GetArticle(w http.ResponseWriter, r *http.Request) {
@@ -23,6 +27,11 @@ func (h *ArticleHandler) GetArticle(w http.ResponseWriter, r *http.Request) {
 	article := h.Store.GetArticleByID(id)
 	if article == nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+		return
+	}
+	userID, _ := getUserID(r)
+	if !h.Store.CanViewArticle(userID, article) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "community_only"})
 		return
 	}
 	h.Store.IncrementArticleViews(id)
@@ -95,11 +104,13 @@ func (h *ArticleHandler) DeleteArticle(w http.ResponseWriter, r *http.Request) {
 
 func (h *ArticleHandler) ListByCommunity(w http.ResponseWriter, r *http.Request) {
 	communityID := r.PathValue("id")
-	articles := h.Store.GetArticlesByCommunityID(communityID)
+	viewerID, _ := getUserID(r)
+	limit, offset := pageParams(r)
+	articles, hasMore := h.Store.GetArticlesByCommunityID(communityID, viewerID, limit, offset)
 	if articles == nil {
 		articles = []*models.Article{}
 	}
-	writeJSON(w, http.StatusOK, articles)
+	writeJSON(w, http.StatusOK, models.ArticlePage{Items: articles, HasMore: hasMore})
 }
 
 func (h *ArticleHandler) AddComment(w http.ResponseWriter, r *http.Request) {
@@ -109,6 +120,15 @@ func (h *ArticleHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	articleID := r.PathValue("id")
+	article := h.Store.GetArticleByID(articleID)
+	if article == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "article not found"})
+		return
+	}
+	if !h.Store.CanViewArticle(userID, article) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "community_only"})
+		return
+	}
 	var input models.AddCommentInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
@@ -135,6 +155,15 @@ func (h *ArticleHandler) ToggleReaction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	articleID := r.PathValue("id")
+	article := h.Store.GetArticleByID(articleID)
+	if article == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "article not found"})
+		return
+	}
+	if !h.Store.CanViewArticle(userID, article) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "community_only"})
+		return
+	}
 	var input models.ToggleReactionInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})

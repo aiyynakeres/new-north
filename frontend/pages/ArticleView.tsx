@@ -21,24 +21,33 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
 	const [commentText, setCommentText] = useState("");
 	const [users, setUsers] = useState<UserType[]>([]);
 	const [community, setCommunity] = useState<Community | null>(null);
+	const [accessDenied, setAccessDenied] = useState(false);
 
 	useEffect(() => {
 		(async () => {
-			const usersList = await api.getUsers();
-			setUsers(usersList);
-			if (!id) return;
-			const a = await api.getArticleById(id);
-			if (a) {
-				setArticle(a);
-				const authorUser =
-					usersList.find((u) => u.id === a.authorId) || (await api.getUserById(a.authorId));
-				if (authorUser) setAuthor(authorUser);
-				const comm = a.communityId ? ((await api.getCommunityById(a.communityId)) ?? null) : null;
-				setCommunity(comm);
-			} else {
+			setAccessDenied(false);
+			try {
+				const usersList = await api.getUsers();
+				setUsers(usersList);
+				if (!id) return;
+				const a = await api.getArticleById(id);
+				if (a) {
+					setArticle(a);
+					const authorUser =
+						usersList.find((u) => u.id === a.authorId) || (await api.getUserById(a.authorId));
+					if (authorUser) setAuthor(authorUser);
+					const comm = a.communityId ? ((await api.getCommunityById(a.communityId)) ?? null) : null;
+					setCommunity(comm);
+				} else {
+					setArticle(null);
+					setAuthor(null);
+					setCommunity(null);
+				}
+			} catch {
 				setArticle(null);
 				setAuthor(null);
 				setCommunity(null);
+				setAccessDenied(true);
 			}
 		})();
 	}, [id]);
@@ -59,15 +68,7 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
 		}
 	};
 
-	if (!article || !author)
-		return (
-			<div className="flex justify-center p-20">
-				<Loader2 className="animate-spin text-north-400" />
-			</div>
-		);
-
-	const canRead = true;
-	if (!canRead) {
+	if (accessDenied) {
 		return (
 			<div className="max-w-xl mx-auto px-4 py-16 text-center">
 				<Link
@@ -79,14 +80,6 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
 				<p className="text-north-700 text-lg">
 					Эта публикация доступна только участникам сообщества («только для своих»).
 				</p>
-				{community && (
-					<Link
-						to={`/community/${community.id}`}
-						className="inline-block mt-6 text-north-900 font-medium underline underline-offset-2"
-					>
-						Перейти в «{community.name}»
-					</Link>
-				)}
 				{!currentUser && (
 					<p className="mt-6 text-north-600">
 						<Link
@@ -101,6 +94,13 @@ const ArticleView: React.FC<Props> = ({ currentUser }) => {
 			</div>
 		);
 	}
+
+	if (!article || !author)
+		return (
+			<div className="flex justify-center p-20">
+				<Loader2 className="animate-spin text-north-400" />
+			</div>
+		);
 
 	const isOwner = currentUser?.id === article.authorId;
 	const canEdit = isOwner;

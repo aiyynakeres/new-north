@@ -3,21 +3,21 @@ package models
 import "time"
 
 type User struct {
-	ID              string   `json:"id"`
-	TelegramHandle  string   `json:"telegramHandle"`
-	Nickname        string   `json:"nickname"`
-	FullName        string   `json:"fullName"`
-	AvatarURL       string   `json:"avatarUrl"`
-	BannerURL       string   `json:"bannerUrl"`
-	Country         string   `json:"country"`
-	City            string   `json:"city"`
-	Bio             string   `json:"bio"`
-	Occupation      string   `json:"occupation"`
-	Company         string   `json:"company"`
-	AboutClub       string   `json:"aboutClub"`
-	ClubOffers      []string `json:"clubOffers"`
-	Tags            []string `json:"tags"`
-	JoinedAt        string   `json:"joinedAt"`
+	ID             string   `json:"id"`
+	TelegramHandle string   `json:"telegramHandle"`
+	Nickname       string   `json:"nickname"`
+	FullName       string   `json:"fullName"`
+	AvatarURL      string   `json:"avatarUrl"`
+	BannerURL      string   `json:"bannerUrl"`
+	Country        string   `json:"country"`
+	City           string   `json:"city"`
+	Bio            string   `json:"bio"`
+	Occupation     string   `json:"occupation"`
+	Company        string   `json:"company"`
+	AboutClub      string   `json:"aboutClub"`
+	ClubOffers     []string `json:"clubOffers"`
+	Tags           []string `json:"tags"`
+	JoinedAt       string   `json:"joinedAt"`
 }
 
 type Comment struct {
@@ -74,6 +74,11 @@ type LeaderboardEntry struct {
 	ArticleCount int  `json:"articleCount"`
 }
 
+type ArticlePage struct {
+	Items   []*Article `json:"items"`
+	HasMore bool       `json:"hasMore"`
+}
+
 type JoinResult struct {
 	OK    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
@@ -115,20 +120,20 @@ type CreateCommunityInput struct {
 }
 
 type CreateArticleInput struct {
-	CommunityID *string         `json:"communityId,omitempty"`
-	Audience    string          `json:"audience,omitempty"`
-	Title       string          `json:"title"`
-	Preview     string          `json:"preview"`
-	Blocks      []ArticleBlock  `json:"blocks,omitempty"`
-	Tags        []string        `json:"tags"`
+	CommunityID *string        `json:"communityId,omitempty"`
+	Audience    string         `json:"audience,omitempty"`
+	Title       string         `json:"title"`
+	Preview     string         `json:"preview"`
+	Blocks      []ArticleBlock `json:"blocks,omitempty"`
+	Tags        []string       `json:"tags"`
 }
 
 type UpdateArticleInput struct {
-	Title     *string        `json:"title,omitempty"`
-	Preview   *string        `json:"preview,omitempty"`
-	Audience  *string        `json:"audience,omitempty"`
-	Blocks    *[]ArticleBlock `json:"blocks,omitempty"`
-	Tags      *[]string      `json:"tags,omitempty"`
+	Title    *string         `json:"title,omitempty"`
+	Preview  *string         `json:"preview,omitempty"`
+	Audience *string         `json:"audience,omitempty"`
+	Blocks   *[]ArticleBlock `json:"blocks,omitempty"`
+	Tags     *[]string       `json:"tags,omitempty"`
 }
 
 type UpdateProfileInput struct {

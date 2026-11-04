@@ -94,11 +94,12 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetUserArticles(w http.ResponseWriter, r *http.Request) {
 	authorID := r.PathValue("id")
 	viewerID, _ := getUserID(r)
-	articles := h.Store.GetArticlesForProfile(authorID, &viewerID)
+	limit, offset := pageParams(r)
+	articles, hasMore := h.Store.GetArticlesForProfile(authorID, viewerID, limit, offset)
 	if articles == nil {
 		articles = []*models.Article{}
 	}
-	writeJSON(w, http.StatusOK, articles)
+	writeJSON(w, http.StatusOK, models.ArticlePage{Items: articles, HasMore: hasMore})
 }
 
 func (h *UserHandler) FollowUser(w http.ResponseWriter, r *http.Request) {

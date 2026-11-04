@@ -194,13 +194,46 @@ func (s *Store) GetArticles() []*models.Article {
 	return queryArticles(ctx, s.db.Pool, "SELECT id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at::text, updated_at::text, views, comments_count FROM articles ORDER BY created_at DESC")
 }
 
-func (s *Store) GetArticlesForPublicFeed() []*models.Article {
+func (s *Store) GetArticlesForPublicFeed(limit, offset int) ([]*models.Article, bool) {
 	ctx := context.Background()
-	return queryArticles(ctx, s.db.Pool,
+	articles := queryArticles(ctx, s.db.Pool,
 		`SELECT a.id, a.author_id, a.community_id, a.audience, a.title, a.preview, a.content, a.blocks, a.tags, a.created_at::text, a.updated_at::text, a.views, a.comments_count
 		 FROM articles a
 		 WHERE a.audience != 'community_only'
-		 ORDER BY a.created_at DESC`)
+		 ORDER BY a.created_at DESC, a.id DESC
+		 LIMIT $1 OFFSET $2`, limit+1, offset)
+	return splitArticlePage(articles, limit)
+}
+
+// splitArticlePage trims the extra row used to detect whether another page exists.
+func splitArticlePage(articles []*models.Article, limit int) ([]*models.Article, bool) {
+	if len(articles) > limit {
+		return articles[:limit], true
+	}
+	return articles, false
+}
+
+// CanViewArticle reports whether userID may read article. Public posts are
+// readable by everyone; community-only posts require the author, a community
+// member, an admin, or the creator.
+func (s *Store) CanViewArticle(userID string, article *models.Article) bool {
+	if article == nil || article.Audience != "community_only" {
+		return true
+	}
+	if userID != "" && article.AuthorID == userID {
+		return true
+	}
+	if article.CommunityID == nil || *article.CommunityID == "" {
+		return true
+	}
+	if userID == "" {
+		return false
+	}
+	community := s.GetCommunityByID(*article.CommunityID)
+	if community == nil {
+		return false
+	}
+	return community.CreatorID == userID || contains(community.AdminIDs, userID) || contains(community.MemberIDs, userID)
 }
 
 func (s *Store) GetArticleByID(id string) *models.Article {
@@ -322,29 +355,36 @@ func (s *Store) DeleteArticle(id string) {
 	s.db.Pool.Exec(ctx, "DELETE FROM articles WHERE id = $1", id)
 }
 
-func (s *Store) GetArticlesByCommunityID(communityID string) []*models.Article {
+func (s *Store) GetArticlesByCommunityID(communityID, viewerID string, limit, offset int) ([]*models.Article, bool) {
 	ctx := context.Background()
-	return queryArticles(ctx, s.db.Pool,
+	canViewAll := false
+	if viewerID != "" {
+		community := s.GetCommunityByID(communityID)
+		canViewAll = community != nil &&
+			(community.CreatorID == viewerID || contains(community.AdminIDs, viewerID) || contains(community.MemberIDs, viewerID))
+	}
+	articles := queryArticles(ctx, s.db.Pool,
 		`SELECT id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at::text, updated_at::text, views, comments_count
-		 FROM articles WHERE community_id = $1
-		 ORDER BY created_at DESC`, communityID)
+		 FROM articles
+		 WHERE community_id = $1
+		   AND (audience != 'community_only' OR $2 OR author_id = $3)
+		 ORDER BY created_at DESC, id DESC
+		 LIMIT $4 OFFSET $5`, communityID, canViewAll, viewerID, limit+1, offset)
+	return splitArticlePage(articles, limit)
 }
 
-func (s *Store) GetArticlesForProfile(authorID string, viewerID *string) []*models.Article {
+func (s *Store) GetArticlesForProfile(authorID, viewerID string, limit, offset int) ([]*models.Article, bool) {
 	ctx := context.Background()
-	var articles []*models.Article
-	if viewerID != nil && *viewerID == authorID {
-		articles = queryArticles(ctx, s.db.Pool,
-			`SELECT id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at::text, updated_at::text, views, comments_count
-			 FROM articles WHERE author_id = $1
-			 ORDER BY created_at DESC`, authorID)
-	} else {
-		articles = queryArticles(ctx, s.db.Pool,
-			`SELECT id, author_id, community_id, audience, title, preview, content, blocks, tags, created_at::text, updated_at::text, views, comments_count
-			 FROM articles WHERE author_id = $1 AND audience != 'community_only'
-			 ORDER BY created_at DESC`, authorID)
-	}
-	return articles
+	articles := queryArticles(ctx, s.db.Pool,
+		`SELECT a.id, a.author_id, a.community_id, a.audience, a.title, a.preview, a.content, a.blocks, a.tags, a.created_at::text, a.updated_at::text, a.views, a.comments_count
+		 FROM articles a
+		 LEFT JOIN communities c ON c.id = a.community_id
+		 WHERE a.author_id = $1
+		   AND (a.audience != 'community_only'
+		        OR ($2 <> '' AND (a.author_id = $2 OR c.creator_id = $2 OR $2 = ANY(c.admin_ids) OR $2 = ANY(c.member_ids))))
+		 ORDER BY a.created_at DESC, a.id DESC
+		 LIMIT $3 OFFSET $4`, authorID, viewerID, limit+1, offset)
+	return splitArticlePage(articles, limit)
 }
 
 func (s *Store) CountArticlesByAuthor(authorID string) int {
