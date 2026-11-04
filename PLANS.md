@@ -117,13 +117,12 @@ There are currently no tests and no CI pipeline.
 
 ### Preview (staging)
 
-- **Frontend:** https://new-north-preview.vercel.app — alias to the latest
-  `preview` branch deployment of `new-north-frontend`.
-- **Backend:** https://new-north-backend-preview.vercel.app — alias to the latest
-  `preview` branch deployment of `new-north-backend`.
-- **Stable branch aliases:**
-  - `new-north-frontend-git-preview-aiyynakeres-projects.vercel.app`
-  - `new-north-backend-git-preview-aiyynakeres-projects.vercel.app`
+- **Frontend:** https://new-north-preview.vercel.app — project domain assigned to
+  the `preview` branch of `new-north-frontend`; follows preview deployments
+  automatically.
+- **Backend:** https://new-north-backend-preview.vercel.app — project domain
+  assigned to the `preview` branch of `new-north-backend`; follows preview
+  deployments automatically.
 - **Database:** separate Neon Postgres, exposed as `PREVIEW_DATABASE_URL` only in
   the Preview environment; the backend selects it when `VERCEL_ENV=preview`.
 - **Auth:** `ALLOW_DEV_AUTH=true`; sign in with `admin_north` or `lena_dev` and
@@ -137,8 +136,6 @@ There are currently no tests and no CI pipeline.
 
 - Pushes to `main` deploy Production; pushes to the `preview` branch deploy
   Preview. Merge `main` into `preview` to keep staging current.
-- The pretty preview aliases are pinned to a deployment; re-point them after a
-  preview deployment, or use the stable branch aliases above.
 - Do not create separate Vercel projects per environment. Use the built-in
   Production/Preview environments and their env vars.
 
@@ -158,9 +155,6 @@ There are currently no tests and no CI pipeline.
 - Preview uses the shared code `123456` and must not contain real data.
 - Preview and production use separate Neon databases in the same two Vercel
   projects (Production/Preview environments).
-- `new-north-preview.vercel.app` and `new-north-backend-preview.vercel.app` are
-  pinned aliases; re-point them after each preview deployment or use the branch
-  aliases.
 
 ## Local testing checklist
 
