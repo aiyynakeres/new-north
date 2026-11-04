@@ -7,18 +7,18 @@ import type { Community, User } from "../../types";
 
 const TOP_LIMIT = 5;
 
-const FeedSidebar: React.FC = () => {
+type Props = {
+	communities: Community[];
+};
+
+const FeedSidebar: React.FC<Props> = ({ communities }) => {
 	const [topAuthors, setTopAuthors] = useState<{ user: User; articleCount: number }[]>([]);
-	const [topCommunities, setTopCommunities] = useState<Community[]>([]);
+	const topCommunities = communities.slice(0, TOP_LIMIT);
 
 	useEffect(() => {
 		(async () => {
-			const [authors, comms] = await Promise.all([
-				api.getAuthorsLeaderboard(),
-				api.getCommunitiesByMemberCount(),
-			]);
+			const authors = await api.getAuthorsLeaderboard();
 			setTopAuthors((authors ?? []).slice(0, TOP_LIMIT));
-			setTopCommunities((comms ?? []).slice(0, TOP_LIMIT));
 		})();
 	}, []);
 

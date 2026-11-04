@@ -38,6 +38,7 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
 	const [myCommunities, setMyCommunities] = useState<Community[]>([]);
 	const [communityId, setCommunityId] = useState<string>("");
 	const [audience, setAudience] = useState<ArticleAudience>("public");
+	const [existingArticle, setExistingArticle] = useState<ArticleType | undefined>(undefined);
 
 	useEffect(() => {
 		(async () => {
@@ -51,6 +52,7 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
 		(async () => {
 			const existing = await api.getArticleById(id);
 			if (existing) {
+				setExistingArticle(existing);
 				setTitle(existing.title);
 				setTags(existing.tags);
 				setCommunityId(existing.communityId || "");
@@ -65,6 +67,12 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
 							content: existing.content,
 						},
 					]);
+				}
+				if (existing.communityId) {
+					const c = await api.getCommunityById(existing.communityId);
+					if (c) {
+						setMyCommunities((prev) => (prev.some((x) => x.id === c.id) ? prev : [...prev, c]));
+					}
 				}
 			} else {
 				navigate("/");
@@ -160,20 +168,6 @@ const Editor: React.FC<Props> = ({ currentUser }) => {
 		setBlocks(newBlocks);
 	};
 
-	const [existingArticle, setExistingArticle] = useState<ArticleType | undefined>(undefined);
-	useEffect(() => {
-		if (!id) return;
-		(async () => {
-			const a = await api.getArticleById(id);
-			setExistingArticle(a);
-			if (a?.communityId) {
-				const c = await api.getCommunityById(a.communityId);
-				if (c && !myCommunities.some((x) => x.id === c.id)) {
-					setMyCommunities((prev) => [...prev, c]);
-				}
-			}
-		})();
-	}, [id, myCommunities.some]);
 	const canPickCommunity = !existingArticle || existingArticle.authorId === currentUser.id;
 
 	const communityOptions = useMemo(() => {

@@ -166,4 +166,56 @@ export const isMockMode =
 	import.meta.env.VITE_USE_MOCKS === "true" ||
 	(import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS !== "false");
 
-export const api = (isMockMode ? mockApi : httpApi) as typeof httpApi;
+const READ_METHODS = new Set([
+	"getMe",
+	"getSession",
+	"getUser",
+	"getUsers",
+	"getFollowing",
+	"isFollowing",
+	"getLeaderboard",
+	"getFeed",
+	"getArticleById",
+	"getCommunities",
+	"getCommunityById",
+	"getCommunityMembers",
+	"getCommunitiesForMember",
+	"getCommunityArticles",
+	"getUserArticles",
+	"getAuthorsLeaderboard",
+	"getCommunitiesByMemberCount",
+	"getUserById",
+	"getArticlesForProfile",
+	"isFollowingUser",
+	"getArticlesByCommunityId",
+	"getArticles",
+]);
+
+const inFlightReads = new Map<string, Promise<unknown>>();
+
+/**
+ * Shares concurrent calls to read-only methods. React StrictMode invokes
+ * effects twice in development, which otherwise fires duplicate requests.
+ */
+function dedupeReadMethods<T extends object>(target: T): T {
+	return new Proxy(target, {
+		get(obj, prop, receiver) {
+			const value = Reflect.get(obj, prop, receiver);
+			if (typeof prop !== "string" || typeof value !== "function" || !READ_METHODS.has(prop)) {
+				return value;
+			}
+			return (...args: unknown[]) => {
+				const key = `${prop}:${JSON.stringify(args)}`;
+				const pending = inFlightReads.get(key);
+				if (pending) return pending;
+				const request = Promise.resolve(value.apply(obj, args)).finally(() => {
+					if (inFlightReads.get(key) === request) inFlightReads.delete(key);
+				});
+				inFlightReads.set(key, request);
+				return request;
+			};
+		},
+	});
+}
+
+export const api = dedupeReadMethods(isMockMode ? mockApi : httpApi) as typeof httpApi;

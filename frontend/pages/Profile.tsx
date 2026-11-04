@@ -56,14 +56,6 @@ const Profile: React.FC<Props> = ({ currentUser }) => {
 		})();
 	}, [id, currentUser?.id, currentUser]);
 
-	useEffect(() => {
-		if (!user || !currentUser || currentUser.id === user.id) {
-			setIsFollowing(false);
-			return;
-		}
-		(async () => setIsFollowing(await api.isFollowingUser(currentUser.id, user.id)))();
-	}, [user, currentUser]);
-
 	const addTag = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter" && tagInput.trim()) {
 			e.preventDefault();

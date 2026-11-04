@@ -48,7 +48,7 @@ const Feed: React.FC<Props> = ({ currentUser }) => {
 						);
 					})}
 				</main>
-				<FeedSidebar />
+				<FeedSidebar communities={communities} />
 			</div>
 		</div>
 	);
